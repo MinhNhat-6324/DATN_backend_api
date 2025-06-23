@@ -26,3 +26,13 @@ Route::post('/user/update-profile', [RegisterController::class, 'updateStudentPr
 
 // Route cho API chuyên ngành sản phẩm
 Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);
+
+// Route cho API tài khoản
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/tai-khoan', [TaiKhoanController::class, 'index']); // Route lấy danh sách
+    Route::post('/tai-khoan', [TaiKhoanController::class, 'store']); // Route tạo mới
+    Route::get('/tai-khoan/{id}', [TaiKhoanController::class, 'show']); // Route xem chi tiết
+    Route::put('/tai-khoan/{id}', [TaiKhoanController::class, 'update']); // Route cập nhật (dùng PUT/PATCH)
+    Route::delete('/tai-khoan/{id}', [TaiKhoanController::class, 'destroy']); // Route xóa
+});
+Route::get('/bai-dang', [BaiDangController::class, 'index']);

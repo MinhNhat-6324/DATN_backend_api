@@ -7,22 +7,69 @@ use App\Models\TaiKhoan; // Import Model TaiKhoan
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash; // Để mã hóa mật khẩu
 use Illuminate\Validation\ValidationException; // Để bắt lỗi validation
+use Illuminate\Support\Facades\Log; // Import Log facade để ghi log lỗi
 
 class TaiKhoanController extends Controller
 {
     /**
      * Lấy danh sách tất cả tài khoản.
+     * Hỗ trợ phân trang và tìm kiếm theo email, họ tên hoặc số điện thoại.
      * GET /api/tai-khoan
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function index()
+    public function index(Request $request)
     {
-        $taiKhoans = TaiKhoan::all(); // Lấy tất cả các tài khoản từ database
-        return response()->json($taiKhoans);
+        try {
+            // Lấy tham số phân trang từ request, mặc định là 10 mục mỗi trang
+            $perPage = $request->input('per_page', 10);
+            $search = $request->input('search'); // Tham số tìm kiếm
+
+            $query = TaiKhoan::query();
+
+            // Áp dụng tìm kiếm nếu có tham số 'search'
+            if ($search) {
+                $query->where('email', 'like', '%' . $search . '%')
+                      ->orWhere('ho_ten', 'like', '%' . $search . '%')
+                      ->orWhere('so_dien_thoai', 'like', '%' . $search . '%');
+            }
+
+            // Phân trang kết quả
+            $accounts = $query->paginate($perPage);
+
+            // Trả về phản hồi JSON với danh sách tài khoản đã phân trang
+            return response()->json([
+                'message' => 'Lấy danh sách tài khoản thành công.',
+                'data' => $accounts->items(), // Chỉ lấy các mục hiện tại trên trang
+                'pagination' => [ // Thông tin phân trang
+                    'total' => $accounts->total(),
+                    'per_page' => $accounts->perPage(),
+                    'current_page' => $accounts->currentPage(),
+                    'last_page' => $accounts->lastPage(),
+                    'from' => $accounts->firstItem(),
+                    'to' => $accounts->lastItem(),
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            // Ghi log lỗi để dễ dàng debug
+            Log::error('Error fetching accounts: ' . $e->getMessage(), ['exception' => $e]);
+
+            // Trả về phản hồi lỗi server
+            return response()->json([
+                'message' => 'Đã xảy ra lỗi khi lấy danh sách tài khoản.',
+                'error_detail' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
      * Tạo một tài khoản mới.
      * POST /api/tai-khoan
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -71,6 +118,9 @@ class TaiKhoanController extends Controller
     /**
      * Hiển thị thông tin chi tiết một tài khoản.
      * GET /api/tai-khoan/{id}
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show($id)
     {
@@ -86,6 +136,10 @@ class TaiKhoanController extends Controller
     /**
      * Cập nhật thông tin một tài khoản.
      * PUT/PATCH /api/tai-khoan/{id}
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
@@ -115,7 +169,7 @@ class TaiKhoanController extends Controller
             if ($request->has('mat_khau')) { // Chỉ cập nhật mật khẩu nếu có gửi lên
                 $taiKhoan->mat_khau = Hash::make($request->mat_khau);
             }
-            $taiKhoan->gioi_tinh = $request->input('gioi_tinh', $taiKhoan->gioi_tinh); // Giữ giá trị cũ nếu không gửi lên
+            $taiKhoan->gioi_tinh = $request->input('gioi_tinh', $taiKhoan->gioi_Giaithoai); // Giữ giá trị cũ nếu không gửi lên
             $taiKhoan->anh_dai_dien = $request->anh_dai_dien;
             $taiKhoan->so_dien_thoai = $request->so_dien_thoai;
             $taiKhoan->trang_thai = $request->input('trang_thai', $taiKhoan->trang_thai);
@@ -139,6 +193,9 @@ class TaiKhoanController extends Controller
     /**
      * Xóa một tài khoản.
      * DELETE /api/tai-khoan/{id}
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($id)
     {
