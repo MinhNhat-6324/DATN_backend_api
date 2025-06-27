@@ -50,6 +50,3 @@ Route::get('/bai-dang/loai/{id_loai}', [BaiDangController::class, 'getByLoai']);
 
 //Ngành
 Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);
-
-// loại
-Route::get('/loai', [LoaiSanPhamController::class, 'index']);

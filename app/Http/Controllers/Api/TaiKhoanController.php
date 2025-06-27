@@ -8,10 +8,6 @@ use App\Models\SinhVien; // Import Model SinhVien (để lưu thông tin sinh vi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash; // Để mã hóa mật khẩu
 use Illuminate\Validation\ValidationException; // Để bắt lỗi validation
-use Illuminate\Support\Facades\Log; // Import Log facade để ghi log lỗi
-use Illuminate\Support\Facades\Storage; // Import Storage facade để xử lý file
-use Illuminate\Support\Str; // Import Str facade để kiểm tra và tạo chuỗi ngẫu nhiên
-use Illuminate\Support\Facades\DB; // Import DB facade for transactions
 
 class TaiKhoanController extends Controller
 {
@@ -49,8 +45,6 @@ class TaiKhoanController extends Controller
     }
     /**
      * Lấy danh sách tất cả tài khoản.
-     * Hỗ trợ phân trang và tìm kiếm theo email, họ tên hoặc số điện thoại.
-     * Có thể lọc theo trạng thái (trang_thai) và loại tài khoản (loai_tai_khoan).
      * GET /api/tai-khoan
      *
      * @param Request $request
@@ -58,65 +52,8 @@ class TaiKhoanController extends Controller
      */
     public function index(Request $request)
     {
-        try {
-            $perPage = $request->input('per_page', 10);
-            $search = $request->input('search');
-
-            $query = TaiKhoan::query();
-
-            // Lọc theo loai_tai_khoan (nếu có) - giả định bạn muốn lọc theo loai_tai_khoan = 0 cho sinh viên
-            // Nếu bạn muốn hiển thị cả admin và sinh viên, hãy xóa dòng này hoặc thêm logic phức tạp hơn
-            $query->where('loai_tai_khoan', 0); // Giữ lại để chỉ lấy tài khoản sinh viên
-
-            // *******************************************************************
-            // ĐÂY LÀ PHẦN SỬA LỖI: ÁP DỤNG LỌC TRẠNG THÁI TỪ REQUEST PARAMETER
-            // *******************************************************************
-            if ($request->has('trang_thai')) {
-                $status = $request->input('trang_thai');
-                $query->where('trang_thai', $status);
-            } else {
-                // Nếu không có tham số trang_thai, mặc định chỉ lấy trạng thái 1 (Đã kích hoạt)
-                // HOẶC bạn có thể xóa dòng này để lấy tất cả trạng thái nếu không có tham số
-                $query->where('trang_thai', 1); // Mặc định chỉ lấy tài khoản đã kích hoạt nếu không có tham số trạng_thai
-            }
-
-
-            // Áp dụng tìm kiếm nếu có tham số 'search'
-            if ($search) {
-                $query->where(function($q) use ($search) {
-                    $q->where('email', 'like', '%' . $search . '%')
-                      ->orWhere('ho_ten', 'like', '%' . $search . '%')
-                      ->orWhere('so_dien_thoai', 'like', '%' . $search . '%');
-                });
-            }
-
-            $accounts = $query->paginate($perPage);
-
-            // Chuyển đổi đường dẫn ảnh đại diện thành URL đầy đủ cho mỗi tài khoản
-            foreach ($accounts->items() as $account) {
-                $account->anh_dai_dien = $this->getFullImageUrl($account->anh_dai_dien);
-            }
-
-            return response()->json([
-                'message' => 'Lấy danh sách tài khoản thành công.',
-                'data' => $accounts->items(),
-                'pagination' => [
-                    'total' => $accounts->total(),
-                    'per_page' => $accounts->perPage(),
-                    'current_page' => $accounts->currentPage(),
-                    'last_page' => $accounts->lastPage(),
-                    'from' => $accounts->firstItem(),
-                    'to' => $accounts->lastItem(),
-                ],
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Error fetching accounts: ' . $e->getMessage(), ['exception' => $e]);
-            return response()->json([
-                'message' => 'Đã xảy ra lỗi khi lấy danh sách tài khoản.',
-                'error_detail' => $e->getMessage(),
-            ], 500);
-        }
+        $taiKhoans = TaiKhoan::all(); // Lấy tất cả các tài khoản từ database
+        return response()->json($taiKhoans);
     }
 
     /**
@@ -177,10 +114,6 @@ class TaiKhoanController extends Controller
     /**
      * Tạo tài khoản mới.
      * POST /api/tai-khoan
-     * Trạng thái mặc định cho tài khoản người dùng mới là 0 (Chờ duyệt).
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
      public function store(Request $request)
 {
@@ -330,11 +263,6 @@ class TaiKhoanController extends Controller
     /**
      * Cập nhật thông tin một tài khoản (Dành cho admin hoặc chỉnh sửa hồ sơ chung).
      * PUT/PATCH /api/tai-khoan/{id}
-     * Lưu ý: Phương thức này không dành cho OCR mà cho cập nhật thông tin chung.
-     *
-     * @param Request $request
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
      */
   public function update(Request $request, $id)
 {
@@ -374,24 +302,11 @@ class TaiKhoanController extends Controller
         }
         if ($request->has('ho_ten')) {
             $taiKhoan->ho_ten = $request->ho_ten;
-        }
-        if ($request->has('mat_khau') && !empty($request->mat_khau)) {
-            $taiKhoan->mat_khau = Hash::make($request->mat_khau);
-        }
-        if ($request->has('gioi_tinh')) {
-            $taiKhoan->gioi_tinh = $request->gioi_tinh;
-        }
-
-        if ($request->hasFile('anh_dai_dien_file')) {
-            $imageFile = $request->file('anh_dai_dien_file');
-            $filename = time() . '_avatar_' . Str::random(10) . '.' . $imageFile->getClientOriginalExtension();
-            $relativePath = $imageFile->storeAs('avatars', $filename, 'public');
-            $taiKhoan->anh_dai_dien = $relativePath;
-        } else if ($request->has('anh_dai_dien')) {
-            $taiKhoan->anh_dai_dien = $request->input('anh_dai_dien');
-        }
-
-        if ($request->has('so_dien_thoai')) {
+            if ($request->has('mat_khau')) { // Chỉ cập nhật mật khẩu nếu có gửi lên
+                $taiKhoan->mat_khau = Hash::make($request->mat_khau);
+            }
+            $taiKhoan->gioi_tinh = $request->input('gioi_tinh', $taiKhoan->gioi_tinh); // Giữ giá trị cũ nếu không gửi lên
+            $taiKhoan->anh_dai_dien = $request->anh_dai_dien;
             $taiKhoan->so_dien_thoai = $request->so_dien_thoai;
         }
         if ($request->has('trang_thai')) {
@@ -643,77 +558,4 @@ class TaiKhoanController extends Controller
 
         return response()->json(['message' => 'Tài khoản đã được xóa thành công.'], 204);
     }
-
-        /**
-     * Đổi mật khẩu cho người dùng.
-     * Cần bảo vệ route này bằng middleware auth:sanctum.
-     */
-
-
-    public function changePassword(Request $request)
-        {
-            // dd($request->user());
-
-            try {
-                // 1. Validate the incoming request data
-                $request->validate([
-                    'user_id' => 'required|exists:TaiKhoan,id_tai_khoan',
-                    'current_password' => 'required|string',
-                    'new_password' => 'required|string|min:8|confirmed', // 'confirmed' checks against new_password_confirmation
-                ]);
-
-                $userId = $request->user_id;
-                // 2. Sửa tên biến để khớp với key gửi từ Flutter (current_password)
-                $currentPassword = $request->current_password; 
-                $newPassword = $request->new_password;
-
-                // 3. Find the user account by the provided user_id
-                $taiKhoan = TaiKhoan::find($userId);
-
-                // 4. NEW: Add an explicit null check for $taiKhoan
-                // This prevents the "Attempt to read property ... on null" error
-                if (!$taiKhoan) {
-                    // Mặc dù validation 'exists' nên bắt lỗi này,
-                    // nhưng nếu vì lý do nào đó mà validation không bắt được,
-                    // chúng ta sẽ trả về lỗi 404 hoặc 400.
-                    return response()->json(['message' => 'Tài khoản không tồn tại hoặc không tìm thấy.'], 404);
-                }
-
-                // 5. Security check: Ensure the authenticated user is changing their own password
-                // This is crucial to prevent one user from changing another's password.
-                // Dòng này (tức dòng 646 của bạn) giờ đã an toàn vì $taiKhoan chắc chắn không null
-                if ($request->user()->id_tai_khoan != $taiKhoan->id_tai_khoan) {
-                    return response()->json(['message' => 'Bạn không có quyền đổi mật khẩu cho tài khoản này.'], 403);
-                }
-
-                // 6. Verify the current password
-                if (!Hash::check($currentPassword, $taiKhoan->mat_khau)) {
-                    throw ValidationException::withMessages([
-                        'current_password' => ['Mật khẩu hiện tại không chính xác.'],
-                    ]);
-                }
-
-                // 7. Update the password with the new hashed password
-                $taiKhoan->mat_khau = Hash::make($newPassword);
-                $taiKhoan->save();
-
-                return response()->json([
-                    'message' => 'Mật khẩu của bạn đã được đổi thành công!',
-                ], 200);
-
-            } catch (ValidationException $e) {
-                // Handle validation errors
-                return response()->json([
-                    'message' => 'Dữ liệu đầu vào không hợp lệ.',
-                    'errors' => $e->errors(),
-                ], 422);
-            } catch (\Exception $e) {
-                // Catch any other unexpected exceptions
-                Log::error('Error changing password: ' . $e->getMessage(), ['exception' => $e]);
-                return response()->json([
-                    'message' => 'Đã có lỗi xảy ra khi đổi mật khẩu. Vui lòng thử lại sau.',
-                    'error_detail' => env('APP_DEBUG') ? $e->getMessage() : null, // Show detail in debug mode
-                ], 500);
-            }
-        }
 }
