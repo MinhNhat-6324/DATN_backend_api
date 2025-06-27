@@ -43,7 +43,7 @@ class BaiDang extends Model
     }
 
     // Mối quan hệ: Một BaiDang có nhiều AnhBaiDang
-    public function anhBaiDangs()
+    public function anhBaiDang()
     {
         return $this->hasMany(AnhBaiDang::class, 'id_bai_dang', 'id_bai_dang');
     }

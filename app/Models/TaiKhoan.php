@@ -49,4 +49,10 @@ class TaiKhoan extends Authenticatable
     {
         return $this->hasOne(SinhVien::class, 'id_sinh_vien', 'id_tai_khoan');
     }
+
+    public function thongBaos()
+    {
+        return $this->hasMany(ThongBao::class, 'id_tai_khoan', 'id_tai_khoan');
+    }
+
 }

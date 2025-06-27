@@ -39,4 +39,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tai-khoan/change-password', [TaiKhoanController::class, 'changePassword']);
 });
 
+//Bai đăng
+Route::get('/bai-dang', [BaiDangController::class, 'index']);
+Route::get('/bai-dang/nganh/{id_nganh}', [BaiDangController::class, 'getByNganh']);
+Route::get('/bai-dang/tieu-de/{tieu_de}', [BaiDangController::class, 'getByTieuDe']);
+Route::get('/bai-dang/nganh/{id_nganh}/loai/{id_loai}', [BaiDangController::class, 'getByNganhVaLoai']);
+Route::get('/bai-dang/loc/{id_nganh}/{id_loai}/{tieu_de}', [BaiDangController::class, 'locBaiDang']);
+Route::get('/bai-dang/loai/{id_loai}/tieu-de/{tieu_de}', [BaiDangController::class, 'locTheoLoaiVaTieuDe']);
+Route::get('/bai-dang/loai/{id_loai}', [BaiDangController::class, 'getByLoai']);
 
+//Ngành
+Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);
+
+// loại
+Route::get('/loai', [LoaiSanPhamController::class, 'index']);

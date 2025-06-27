@@ -716,5 +716,4 @@ class TaiKhoanController extends Controller
                 ], 500);
             }
         }
-    
 }

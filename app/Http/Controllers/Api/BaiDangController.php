@@ -3,65 +3,89 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\BaiDang; // Import Model BaiDang
+use App\Models\BaiDang;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class BaiDangController extends Controller
 {
     /**
-     * Lấy danh sách tất cả bài đăng.
      * GET /api/bai-dang
+     * Lấy danh sách bài đăng + ảnh sản phẩm
      */
     public function index()
     {
-        // Có thể thêm with(['taiKhoan', 'loaiSanPham', 'chuyenNganhSanPham']) để load mối quan hệ
-        $baiDangs = BaiDang::with(['taiKhoan', 'loaiSanPham', 'chuyenNganhSanPham'])->get();
+        $baiDangs = BaiDang::with([
+                'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
+                'chuyenNganhSanPham:id_nganh,ten_nganh'
+            ])
+            ->select([
+                'id_bai_dang',
+                'id_tai_khoan',
+                'tieu_de',
+                'gia',
+                'do_moi',
+                'trang_thai',
+                'ngay_dang',
+                'id_loai',
+                'id_nganh',
+            ])
+            ->orderByDesc('ngay_dang')
+            ->get();
+
         return response()->json($baiDangs);
-    }
+    } // ✅ ĐÓNG dấu ngoặc của index() ở đây
 
     /**
-     * Tạo một bài đăng mới.
-     * POST /api/bai-dang
+     * GET /api/bai-dang/nganh/{id}
+     * Lấy danh sách bài đăng theo ngành
      */
-    public function store(Request $request)
+    public function getByNganh($id_nganh)
     {
-        try {
-            $request->validate([
-                'id_tai_khoan' => 'required|integer|exists:TaiKhoan,id_tai_khoan',
-                'tieu_de' => 'required|string|max:255',
-                'do_moi' => 'nullable|integer|between:0,100',
-                'id_loai' => 'required|integer|exists:LoaiSanPham,id_loai',
-                'id_nganh' => 'required|integer|exists:ChuyenNganhSanPham,id_nganh',
-                'gia' => 'required|numeric|min:0',
-                'trang_thai' => 'string|in:san_sang,dang_giao_dich,hoan_thanh',
-                // 'ngay_dang' không cần validate vì có DEFAULT CURRENT_TIMESTAMP
-            ]);
+        $baiDang = BaiDang::with([
+            'anhBaiDang' => function ($query) {
+                $query->select('id_bai_dang', 'duong_dan', 'thu_tu')->orderBy('thu_tu');
+            },
+            'chuyenNganhSanPham:id_nganh,ten_nganh'
+        ])
+        ->select([
+            'id_bai_dang',
+            'id_tai_khoan',
+            'tieu_de',
+            'gia',
+            'do_moi',
+            'trang_thai',
+            'ngay_dang',
+            'id_loai',
+            'id_nganh',
+        ])
+        ->where('id_nganh', $id_nganh)
+        ->orderByDesc('ngay_dang')
+        ->get();
 
-            $baiDang = BaiDang::create($request->all());
-
-            return response()->json($baiDang, 201);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Dữ liệu không hợp lệ.',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Đã có lỗi xảy ra.',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json($baiDang);
     }
 
     /**
-     * Hiển thị thông tin chi tiết một bài đăng.
      * GET /api/bai-dang/{id}
+     * Chi tiết một bài đăng
      */
     public function show($id)
     {
-        // Có thể thêm with để load mối quan hệ khi hiển thị chi tiết
-        $baiDang = BaiDang::with(['taiKhoan', 'loaiSanPham', 'chuyenNganhSanPham', 'anhBaiDangs', 'tinNhans', 'baoCaos'])->find($id);
+        $baiDang = BaiDang::with(['anhBaiDang' => function ($query) {
+                $query->select('id_bai_dang', 'duong_dan', 'thu_tu')->orderBy('thu_tu');
+            }])
+            ->select([
+                'id_bai_dang',
+                'id_tai_khoan',
+                'tieu_de',
+                'gia',
+                'do_moi',
+                'trang_thai',
+                'ngay_dang',
+                'id_loai',
+                'id_nganh',
+            ])
+            ->find($id);
 
         if (!$baiDang) {
             return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
@@ -70,59 +94,172 @@ class BaiDangController extends Controller
         return response()->json($baiDang);
     }
 
-    /**
-     * Cập nhật thông tin một bài đăng.
-     * PUT/PATCH /api/bai-dang/{id}
-     */
-    public function update(Request $request, $id)
-    {
-        $baiDang = BaiDang::find($id);
-
-        if (!$baiDang) {
-            return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
-        }
-
-        try {
-            $request->validate([
-                'id_tai_khoan' => 'required|integer|exists:TaiKhoan,id_tai_khoan',
-                'tieu_de' => 'required|string|max:255',
-                'do_moi' => 'nullable|integer|between:0,100',
-                'id_loai' => 'required|integer|exists:LoaiSanPham,id_loai',
-                'id_nganh' => 'required|integer|exists:ChuyenNganhSanPham,id_nganh',
-                'gia' => 'required|numeric|min:0',
-                'trang_thai' => 'string|in:san_sang,dang_giao_dich,hoan_thanh',
-            ]);
-
-            $baiDang->update($request->all());
-
-            return response()->json($baiDang);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Dữ liệu không hợp lệ.',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Đã có lỗi xảy ra.',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
 
     /**
-     * Xóa một bài đăng.
-     * DELETE /api/bai-dang/{id}
-     */
-    public function destroy($id)
-    {
-        $baiDang = BaiDang::find($id);
+ * GET /api/bai-dang/nganh/{id_nganh}/loai/{id_loai}
+ * Lấy danh sách bài đăng theo ngành và loại sản phẩm
+ */
+public function getByNganhVaLoai($id_nganh, $id_loai)
+{
+    $baiDangQuery = BaiDang::with([
+        'anhBaiDang' => function ($query) {
+            $query->select('id_bai_dang', 'duong_dan', 'thu_tu')->orderBy('thu_tu');
+        },
+        'chuyenNganhSanPham:id_nganh,ten_nganh'
+    ])
+    ->select([
+        'id_bai_dang',
+        'id_tai_khoan',
+        'tieu_de',
+        'gia',
+        'do_moi',
+        'trang_thai',
+        'ngay_dang',
+        'id_loai',
+        'id_nganh',
+    ])
+    ->where('id_nganh', $id_nganh);
 
-        if (!$baiDang) {
-            return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
-        }
-
-        $baiDang->delete(); // Các AnhBaiDang, TinNhan, BaoCao liên quan sẽ bị xử lý bởi ON DELETE CASCADE/SET NULL trong DB
-
-        return response()->json(['message' => 'Bài đăng đã được xóa thành công.'], 204);
+    // Nếu id_loai khác -1 thì lọc theo loại
+    if ($id_loai != -1) {
+        $baiDangQuery->where('id_loai', $id_loai);
     }
+
+    $result = $baiDangQuery->orderByDesc('ngay_dang')->get();
+
+    return response()->json($result);
+}
+
+/**
+ * GET /api/bai-dang/tieu-de/{tieu_de}
+ * Tìm kiếm bài đăng theo tiêu đề (gần đúng)
+ */
+public function getByTieuDe($tieu_de)
+{
+    $baiDangs = BaiDang::with([
+            'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
+            'chuyenNganhSanPham:id_nganh,ten_nganh'
+        ])
+        ->select([
+            'id_bai_dang',
+            'id_tai_khoan',
+            'tieu_de',
+            'gia',
+            'do_moi',
+            'trang_thai',
+            'ngay_dang',
+            'id_loai',
+            'id_nganh',
+        ])
+        ->where('tieu_de', 'LIKE', '%' . $tieu_de . '%')
+        ->orderByDesc('ngay_dang')
+        ->get();
+
+    return response()->json($baiDangs);
+}
+
+/**
+ * GET /api/bai-dang/loc/{id_nganh}/{id_loai}/{tieu_de}
+ * Lọc bài đăng theo ngành, loại và tiêu đề gần đúng
+ */
+public function locBaiDang($id_nganh, $id_loai, $tieu_de)
+{
+    $query = BaiDang::with([
+            'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
+            'chuyenNganhSanPham:id_nganh,ten_nganh'
+        ])
+        ->select([
+            'id_bai_dang',
+            'id_tai_khoan',
+            'tieu_de',
+            'gia',
+            'do_moi',
+            'trang_thai',
+            'ngay_dang',
+            'id_loai',
+            'id_nganh',
+        ])
+        ->where('id_nganh', $id_nganh);
+
+    if ($id_loai != -1) {
+        $query->where('id_loai', $id_loai);
+    }
+
+    if ($tieu_de != '-' && $tieu_de != '') {
+        $query->where('tieu_de', 'LIKE', '%' . $tieu_de . '%');
+    }
+
+    $result = $query->orderByDesc('ngay_dang')->get();
+
+    return response()->json($result);
+}
+
+/**
+ * GET /api/bai-dang/loai/{id_loai}/tieu-de/{tieu_de}
+ * Lọc bài đăng theo loại sản phẩm và tiêu đề gần đúng
+ */
+/**
+ * GET /api/bai-dang/loai/{id_loai}/tieu-de/{tieu_de}
+ * Lọc bài đăng theo loại sản phẩm và tiêu đề gần đúng
+ */
+/**
+ * GET /api/bai-dang/loai/{id_loai}/tieu-de/{tieu_de}
+ * Lọc bài đăng theo loại sản phẩm và tiêu đề gần đúng
+ */
+public function locTheoLoaiVaTieuDe($id_loai, $tieu_de = null)
+{
+    $query = BaiDang::with([
+            'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
+            'chuyenNganhSanPham:id_nganh,ten_nganh'
+        ])
+        ->select([
+            'id_bai_dang',
+            'id_tai_khoan',
+            'tieu_de',
+            'gia',
+            'do_moi',
+            'trang_thai',
+            'ngay_dang',
+            'id_loai',
+            'id_nganh',
+        ])
+        ->where('id_loai', $id_loai); // luôn lọc theo loại
+
+    // ❌ KHÔNG lọc theo tiêu đề nếu rỗng, null hoặc là '-'
+    if ($tieu_de !== null && $tieu_de !== '' && $tieu_de !== '-') {
+        $query->where('tieu_de', 'LIKE', '%' . $tieu_de . '%');
+    }
+
+    return response()->json($query->orderByDesc('ngay_dang')->get());
+}
+/**
+ * GET /api/bai-dang/loai/{id_loai}
+ * Lấy danh sách bài đăng theo loại sản phẩm
+ */
+public function getByLoai($id_loai)
+{
+    $baiDangs = BaiDang::with([
+            'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
+            'chuyenNganhSanPham:id_nganh,ten_nganh'
+        ])
+        ->select([
+            'id_bai_dang',
+            'id_tai_khoan',
+            'tieu_de',
+            'gia',
+            'do_moi',
+            'trang_thai',
+            'ngay_dang',
+            'id_loai',
+            'id_nganh',
+        ])
+        ->where('id_loai', $id_loai)
+        ->orderByDesc('ngay_dang')
+        ->get();
+
+    return response()->json($baiDangs);
+}
+
+
+
 }
