@@ -17,7 +17,7 @@ class LoaiSanPham extends Model
         'ten_loai',
     ];
 
-    // Một LoaiSanPham có thể có nhiều BaiDang.
+    // Một loại có nhiều bài đăng
     public function baiDangs()
     {
         return $this->hasMany(BaiDang::class, 'id_loai', 'id_loai');
