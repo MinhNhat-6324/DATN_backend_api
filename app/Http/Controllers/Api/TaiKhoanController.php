@@ -8,7 +8,9 @@ use App\Models\SinhVien; // Import Model SinhVien (để lưu thông tin sinh vi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash; // Để mã hóa mật khẩu
 use Illuminate\Validation\ValidationException; // Để bắt lỗi validation
-
+use Illuminate\Support\Str; 
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 class TaiKhoanController extends Controller
 {
     /**
@@ -56,6 +58,67 @@ class TaiKhoanController extends Controller
         return response()->json($taiKhoans);
     }
 
+    /**
+     * Lấy danh sách tài khoản đang hoạt động/khóa.
+     * Hỗ trợ phân trang và tìm kiếm.
+     * Chỉ lấy những tài khoản có loai_tai_khoan = 0 VÀ trạng thái = 1 =2 (đang hoạt động/ khóa).
+     * GET /api/tai-khoan/pending
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+public function danh_sach_tai_khoan(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10);
+            $search = $request->input('search');
+            $status = $request->input('trang_thai'); // Thay 'status' bằng 'trang_thai' để khớp với frontend
+
+            // Bắt đầu truy vấn với điều kiện loai_tai_khoan = 0
+            $query = TaiKhoan::where('loai_tai_khoan', 0);
+
+            // Áp dụng lọc theo trạng thái nếu tham số trang_thai được cung cấp và hợp lệ
+            // Đảm bảo biến $status được sử dụng, không phải cố định giá trị
+            if ($status !== null) { // Kiểm tra nếu tham số 'trang_thai' có tồn tại trong request
+                $query->where('trang_thai', $status);
+            }
+
+            if ($search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('email', 'like', '%' . $search . '%')
+                      ->orWhere('ho_ten', 'like', '%' . $search . '%')
+                      ->orWhere('so_dien_thoai', 'like', '%' . $search . '%');
+                });
+            }
+
+            $accounts = $query->paginate($perPage);
+
+            // Chuyển đổi đường dẫn ảnh đại diện thành URL đầy đủ cho mỗi tài khoản
+            foreach ($accounts->items() as $account) {
+                $account->anh_dai_dien = $this->getFullImageUrl($account->anh_dai_dien);
+            }
+
+            return response()->json([
+                'message' => 'Lấy danh sách tài khoản thành công.',
+                'data' => $accounts->items(),
+                'pagination' => [
+                    'total' => $accounts->total(),
+                    'per_page' => $accounts->perPage(),
+                    'current_page' => $accounts->currentPage(),
+                    'last_page' => $accounts->lastPage(),
+                    'from' => $accounts->firstItem(),
+                    'to' => $accounts->lastItem(),
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching accounts: ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'message' => 'Đã xảy ra lỗi khi lấy danh sách tài khoản.',
+                'error_detail' => $e->getMessage(),
+            ], 500);
+        }
+    }
     /**
      * Lấy danh sách tài khoản đang chờ duyệt.
      * Hỗ trợ phân trang và tìm kiếm.
@@ -264,112 +327,155 @@ class TaiKhoanController extends Controller
      * Cập nhật thông tin một tài khoản (Dành cho admin hoặc chỉnh sửa hồ sơ chung).
      * PUT/PATCH /api/tai-khoan/{id}
      */
-  public function update(Request $request, $id)
-{
-    $taiKhoan = TaiKhoan::find($id);
+public function update(Request $request, $id)
+    {
+        $taiKhoan = TaiKhoan::find($id);
 
-    if (!$taiKhoan) {
-        return response()->json(['message' => 'Không tìm thấy tài khoản.'], 404);
-    }
-
-    try {
-        $request->validate([
-            'email' => [
-                'sometimes',
-                'email',
-                'unique:TaiKhoan,email,' . $id . ',id_tai_khoan',
-                'regex:/@caothang\.edu\.vn$/',
-            ],
-            'ho_ten' => 'sometimes|string|max:100',
-            'mat_khau' => 'sometimes|nullable|string|min:6',
-            'gioi_tinh' => 'sometimes|boolean',
-            'anh_dai_dien' => 'sometimes|nullable|string|max:255',
-            'anh_dai_dien_file' => 'sometimes|nullable|image|max:2048',
-            'so_dien_thoai' => 'sometimes|nullable|string|max:20',
-            'trang_thai' => 'sometimes|integer|in:0,1,2',
-            'loai_tai_khoan' => 'sometimes|boolean',
-
-            // Cập nhật SinhVien
-            'sinh_vien' => 'sometimes|array',
-            'sinh_vien.lop' => 'sometimes|string|max:50',
-            'sinh_vien.chuyen_nganh_id' => 'sometimes|integer|exists:ChuyenNganhSanPham,id_nganh',
-            'sinh_vien.anh_the_sinh_vien' => 'sometimes|nullable|string|max:255',
-            'sinh_vien.anh_the_sinh_vien_file' => 'sometimes|nullable|image|max:2048',
-        ]);
-
-        if ($request->has('email')) {
-            $taiKhoan->email = $request->email;
+        if (!$taiKhoan) {
+            return response()->json(['message' => 'Không tìm thấy tài khoản.'], 404);
         }
-        if ($request->has('ho_ten')) {
-            $taiKhoan->ho_ten = $request->ho_ten;
+
+        try {
+            $request->validate([
+                'email' => [
+                    'sometimes',
+                    'email',
+                    'unique:TaiKhoan,email,' . $id . ',id_tai_khoan',
+                    'regex:/@caothang\.edu\.vn$/',
+                ],
+                'ho_ten' => 'sometimes|string|max:100',
+                'mat_khau' => 'sometimes|nullable|string|min:6',
+                'gioi_tinh' => 'sometimes|boolean',
+                'anh_dai_dien' => 'sometimes|nullable|string|max:255',
+                'anh_dai_dien_file' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // 2MB
+                'so_dien_thoai' => 'sometimes|nullable|string|max:20',
+                'trang_thai' => 'sometimes|integer|in:0,1,2',
+                'loai_tai_khoan' => 'sometimes|boolean',
+
+                // Cập nhật SinhVien
+                'sinh_vien' => 'sometimes|array',
+                'sinh_vien.lop' => 'sometimes|string|max:50',
+                'sinh_vien.chuyen_nganh_id' => 'sometimes|integer|exists:ChuyenNganhSanPham,id_nganh',
+                'sinh_vien.anh_the_sinh_vien' => 'sometimes|nullable|string|max:255',
+                'sinh_vien.anh_the_sinh_vien_file' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            ]);
+
+            if ($request->has('email')) {
+                $taiKhoan->email = $request->email;
+            }
+            if ($request->has('ho_ten')) {
+                $taiKhoan->ho_ten = $request->ho_ten;
+            }
             if ($request->has('mat_khau')) { // Chỉ cập nhật mật khẩu nếu có gửi lên
                 $taiKhoan->mat_khau = Hash::make($request->mat_khau);
             }
             $taiKhoan->gioi_tinh = $request->input('gioi_tinh', $taiKhoan->gioi_tinh); // Giữ giá trị cũ nếu không gửi lên
-            $taiKhoan->anh_dai_dien = $request->anh_dai_dien;
+            // Dòng này sẽ được thay thế bằng logic xử lý file bên dưới
+            // $taiKhoan->anh_dai_dien = $request->anh_dai_dien;
             $taiKhoan->so_dien_thoai = $request->so_dien_thoai;
-        }
-        if ($request->has('trang_thai')) {
-            $taiKhoan->trang_thai = $request->trang_thai;
-        }
-        if ($request->has('loai_tai_khoan')) {
-            $taiKhoan->loai_tai_khoan = $request->loai_tai_khoan;
-        }
 
-        $taiKhoan->save();
+            // --- BẮT ĐẦU PHẦN SỬA ĐỔI CHO ẢNH ĐẠI DIỆN ---
+            if ($request->hasFile('anh_dai_dien_file')) {
+                $profileImageFile = $request->file('anh_dai_dien_file');
 
-        // Cập nhật sinh viên nếu là loại tài khoản 0
-        if ($request->has('sinh_vien') && $taiKhoan->loai_tai_khoan == 0) {
-            $sinhVien = $taiKhoan->sinhVien ?? new SinhVien([
-                'id_sinh_vien' => $taiKhoan->id_tai_khoan,
-                'id_tai_khoan' => $taiKhoan->id_tai_khoan,
-            ]);
+                // Tùy chọn: Xóa ảnh cũ để tránh rác storage
+                if ($taiKhoan->anh_dai_dien && Str::startsWith($taiKhoan->anh_dai_dien, url('storage/'))) {
+                    // Cắt bỏ base URL và '/storage/' để lấy đường dẫn tương đối
+                    $oldPath = str_replace(url('storage/'), '', $taiKhoan->anh_dai_dien);
+                    if (Storage::disk('public')->exists($oldPath)) {
+                        Storage::disk('public')->delete($oldPath);
+                        Log::info('Deleted old profile picture: ' . $oldPath);
+                    }
+                }
 
-            if ($request->has('sinh_vien.lop')) {
-                $sinhVien->lop = $request->input('sinh_vien.lop');
+                // Lưu ảnh mới vào thư mục 'profile_pictures' trong storage/app/public
+                $filename = time() . '_profile_' . Str::random(10) . '.' . $profileImageFile->getClientOriginalExtension();
+                $path = $profileImageFile->storeAs('profile_pictures', $filename, 'public');
+
+                // Cập nhật đường dẫn ảnh đã lưu vào trường 'anh_dai_dien' của model
+                $taiKhoan->anh_dai_dien = Storage::url($path);
+                Log::info('New profile picture path saved: ' . $taiKhoan->anh_dai_dien);
+            } else if ($request->has('anh_dai_dien') && is_string($request->anh_dai_dien)) {
+                // Nếu không có file mới, nhưng có trường 'anh_dai_dien' (string),
+                // thì có thể là để xóa ảnh (nếu giá trị là null) hoặc giữ nguyên/cập nhật bằng URL
+                if (is_null($request->anh_dai_dien)) {
+                    if ($taiKhoan->anh_dai_dien && Str::startsWith($taiKhoan->anh_dai_dien, url('storage/'))) {
+                        $oldPath = str_replace(url('storage/'), '', $taiKhoan->anh_dai_dien);
+                        if (Storage::disk('public')->exists($oldPath)) {
+                            Storage::disk('public')->delete($oldPath);
+                            Log::info('Deleted profile picture by null input.');
+                        }
+                    }
+                    $taiKhoan->anh_dai_dien = null;
+                }
+                // Nếu bạn muốn cho phép cập nhật ảnh bằng một URL đã có sẵn, uncomment dòng dưới:
+                // $taiKhoan->anh_dai_dien = $request->anh_dai_dien;
+            }
+            // --- KẾT THÚC PHẦN SỬA ĐỔI CHO ẢNH ĐẠI DIỆN ---
+
+            if ($request->has('trang_thai')) {
+                $taiKhoan->trang_thai = $request->trang_thai;
+            }
+            if ($request->has('loai_tai_khoan')) {
+                $taiKhoan->loai_tai_khoan = $request->loai_tai_khoan;
             }
 
-            if ($request->has('sinh_vien.chuyen_nganh_id')) {
-                $sinhVien->id_nganh = $request->input('sinh_vien.chuyen_nganh_id');
+            $taiKhoan->save();
+
+            // Cập nhật sinh viên nếu là loại tài khoản 0
+            if ($request->has('sinh_vien') && $taiKhoan->loai_tai_khoan == 0) {
+                $sinhVien = $taiKhoan->sinhVien ?? new SinhVien([
+                    'id_sinh_vien' => $taiKhoan->id_tai_khoan,
+                    'id_tai_khoan' => $taiKhoan->id_tai_khoan,
+                ]);
+
+                if ($request->has('sinh_vien.lop')) {
+                    $sinhVien->lop = $request->input('sinh_vien.lop');
+                }
+
+                if ($request->has('sinh_vien.chuyen_nganh_id')) {
+                    $sinhVien->id_nganh = $request->input('sinh_vien.chuyen_nganh_id');
+                }
+
+                // Logic xử lý ảnh thẻ sinh viên (giữ nguyên)
+                if ($request->hasFile('sinh_vien.anh_the_sinh_vien_file')) {
+                    $studentCardFile = $request->file('sinh_vien.anh_the_sinh_vien_file');
+                    $cardFilename = time() . '_student_card_update_' . Str::random(10) . '.' . $studentCardFile->getClientOriginalExtension();
+                    $relativeCardPath = $studentCardFile->storeAs('student_cards', $cardFilename, 'public');
+                    $sinhVien->anh_the_sinh_vien = $relativeCardPath;
+                } else if ($request->has('sinh_vien.anh_the_sinh_vien')) {
+                    $sinhVien->anh_the_sinh_vien = $request->input('sinh_vien.anh_the_sinh_vien');
+                }
+
+                $sinhVien->save();
+                $taiKhoan->setRelation('sinhVien', $sinhVien);
             }
 
-            if ($request->hasFile('sinh_vien.anh_the_sinh_vien_file')) {
-                $studentCardFile = $request->file('sinh_vien.anh_the_sinh_vien_file');
-                $cardFilename = time() . '_student_card_update_' . Str::random(10) . '.' . $studentCardFile->getClientOriginalExtension();
-                $relativeCardPath = $studentCardFile->storeAs('student_cards', $cardFilename, 'public');
-                $sinhVien->anh_the_sinh_vien = $relativeCardPath;
-            } else if ($request->has('sinh_vien.anh_the_sinh_vien')) {
-                $sinhVien->anh_the_sinh_vien = $request->input('sinh_vien.anh_the_sinh_vien');
+            // Chuyển đổi đường dẫn ảnh thành URL đầy đủ (đã được cập nhật từ Storage::url())
+            $taiKhoan->anh_dai_dien = $this->getFullImageUrl($taiKhoan->anh_dai_dien);
+
+            if ($taiKhoan->sinhVien) {
+                $taiKhoan->sinhVien->anh_the_sinh_vien = $this->getFullImageUrl($taiKhoan->sinhVien->anh_the_sinh_vien);
+                $taiKhoan->load(['sinhVien.chuyenNganhSanPham']);
+                $taiKhoan->sinhVien->ten_chuyen_nganh = $taiKhoan->sinhVien->chuyenNganhSanPham->ten_nganh ?? null;
             }
 
-            $sinhVien->save();
-            $taiKhoan->setRelation('sinhVien', $sinhVien);
+            return response()->json($taiKhoan, 200);
+
+        } catch (ValidationException $e) {
+            Log::warning('Validation error during account update: ' . json_encode($e->errors()));
+            return response()->json([
+                'message' => 'Dữ liệu không hợp lệ.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error updating account: ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'message' => 'Đã có lỗi xảy ra khi cập nhật tài khoản.',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // Chuyển đổi đường dẫn ảnh thành URL đầy đủ
-        $taiKhoan->anh_dai_dien = $this->getFullImageUrl($taiKhoan->anh_dai_dien);
-        if ($taiKhoan->sinhVien) {
-            $taiKhoan->sinhVien->anh_the_sinh_vien = $this->getFullImageUrl($taiKhoan->sinhVien->anh_the_sinh_vien);
-            $taiKhoan->load(['sinhVien.chuyenNganhSanPham']);
-            $taiKhoan->sinhVien->ten_chuyen_nganh = $taiKhoan->sinhVien->chuyenNganhSanPham->ten_nganh ?? null;
-        }
-
-        return response()->json($taiKhoan, 200);
-
-    } catch (ValidationException $e) {
-        Log::warning('Validation error during account update: ' . json_encode($e->errors()));
-        return response()->json([
-            'message' => 'Dữ liệu không hợp lệ.',
-            'errors' => $e->errors()
-        ], 422);
-    } catch (\Exception $e) {
-        Log::error('Error updating account: ' . $e->getMessage(), ['exception' => $e]);
-        return response()->json([
-            'message' => 'Đã có lỗi xảy ra khi cập nhật tài khoản.',
-            'error' => $e->getMessage()
-        ], 500);
     }
-}
 
 
     /**
@@ -557,5 +663,70 @@ class TaiKhoanController extends Controller
         $taiKhoan->delete(); // Xóa tài khoản khỏi database
 
         return response()->json(['message' => 'Tài khoản đã được xóa thành công.'], 204);
+    }
+
+    public function changePassword(Request $request, $id)
+    {
+        try {
+            // 1. Validate dữ liệu đầu vào
+            $request->validate([
+                'current_password' => 'required|string',
+                'new_password' => 'required|string|min:8|confirmed', // 'confirmed' tự động kiểm tra 'new_password_confirmation'
+                // Thêm các quy tắc phức tạp hơn nếu cần (RegExp cho ký tự đặc biệt, số, chữ hoa/thường)
+                // Ví dụ: 'new_password' => ['required', 'string', 'min:8', 'confirmed', 'regex:/[A-Z]/', 'regex:/[a-z]/', 'regex:/[0-9]/', 'regex:/[!@#$%^&*(),.?":{}|<>]'/],
+            ], [
+                'current_password.required' => 'Vui lòng nhập mật khẩu hiện tại.',
+                'new_password.required' => 'Vui lòng nhập mật khẩu mới.',
+                'new_password.min' => 'Mật khẩu mới phải có ít nhất :min ký tự.',
+                'new_password.confirmed' => 'Mật khẩu mới và xác nhận mật khẩu không khớp.',
+            ]);
+
+            // 2. Tìm tài khoản
+            $taiKhoan = TaiKhoan::find($id);
+
+            if (!$taiKhoan) {
+                Log::warning("Change password attempt for non-existent user ID: $id");
+                return response()->json(['message' => 'Không tìm thấy tài khoản.'], 404);
+            }
+
+            // 3. Kiểm tra mật khẩu hiện tại
+            if (!Hash::check($request->current_password, $taiKhoan->mat_khau)) {
+                // Log cảnh báo khi mật khẩu cũ không đúng
+                Log::warning("Failed password change for user ID: $id - Incorrect current password.");
+                throw ValidationException::withMessages([
+                    'current_password' => ['Mật khẩu hiện tại không đúng.'],
+                ]);
+            }
+
+            // Tùy chọn: Kiểm tra mật khẩu mới có trùng với mật khẩu cũ không
+            if (Hash::check($request->new_password, $taiKhoan->mat_khau)) {
+                Log::warning("Failed password change for user ID: $id - New password is same as old.");
+                throw ValidationException::withMessages([
+                    'new_password' => ['Mật khẩu mới không được trùng với mật khẩu hiện tại.'],
+                ]);
+            }
+
+            // 4. Mã hóa và cập nhật mật khẩu mới
+            $taiKhoan->mat_khau = Hash::make($request->new_password);
+            $taiKhoan->save();
+
+            Log::info("Password successfully changed for user ID: $id");
+            return response()->json(['message' => 'Đổi mật khẩu thành công!'], 200);
+
+        } catch (ValidationException $e) {
+            // Ghi log chi tiết lỗi validation
+            Log::warning('Validation error during password change: ' . json_encode($e->errors()));
+            return response()->json([
+                'message' => 'Dữ liệu không hợp lệ.',
+                'errors' => $e->errors()
+            ], 422); // Mã 422 cho lỗi validation
+        } catch (\Exception $e) {
+            // Ghi log bất kỳ lỗi không mong muốn nào khác
+            Log::error('Error changing password for user ID: ' . $id . ': ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'message' => 'Đã có lỗi xảy ra khi đổi mật khẩu.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
