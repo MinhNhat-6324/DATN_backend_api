@@ -13,7 +13,6 @@ use App\Http\Controllers\Api\BaoCaoController;
 use App\Http\Controllers\Api\LoginController;
 use App\Http\Controllers\Api\RegisterController;
 
-
 // Kiểm tra đăng nhập
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'register']);
@@ -24,17 +23,22 @@ Route::post('/register/verify-otp', [RegisterController::class, 'verifyOtp']);
 Route::post('/register/resend-otp', [RegisterController::class, 'resendOtp']);
 Route::post('/user/update-profile', [RegisterController::class, 'updateStudentProfile']);
 
+// NEW: Route cho đăng ký tài khoản Admin
+Route::post('/register/admin', [RegisterController::class, 'registerAdmin']);
+
 // Route cho API chuyên ngành sản phẩm
-Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);
+Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);   
 
 // Route cho API tài khoản
+Route::get('/tai-khoan', [TaiKhoanController::class, 'index']); // Route lấy danh sách
+Route::get('/tai-khoan/pending', [TaiKhoanController::class, 'danh_sach_cho']); 
+Route::apiResource('tai-khoan', TaiKhoanController::class);
+
+// Route cho chức năng đổi mật khẩu
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/tai-khoan', [TaiKhoanController::class, 'index']); // Route lấy danh sách
-    Route::post('/tai-khoan', [TaiKhoanController::class, 'store']); // Route tạo mới
-    Route::get('/tai-khoan/{id}', [TaiKhoanController::class, 'show']); // Route xem chi tiết
-    Route::put('/tai-khoan/{id}', [TaiKhoanController::class, 'update']); // Route cập nhật (dùng PUT/PATCH)
-    Route::delete('/tai-khoan/{id}', [TaiKhoanController::class, 'destroy']); // Route xóa
+    Route::post('/tai-khoan/change-password', [TaiKhoanController::class, 'changePassword']);
 });
+
 //Bai đăng
 Route::get('/bai-dang', [BaiDangController::class, 'index']);
 Route::get('/bai-dang/nganh/{id_nganh}', [BaiDangController::class, 'getByNganh']);
@@ -47,5 +51,8 @@ Route::get('/bai-dang/loai/{id_loai}', [BaiDangController::class, 'getByLoai']);
 //Ngành
 Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);
 
-// loại
+//Loai
 Route::get('/loai', [LoaiSanPhamController::class, 'index']);
+
+//sinh viên 
+Route::get('/sinh-vien/{id}', [SinhVienController::class, 'show']);

@@ -25,7 +25,7 @@ class SinhVien extends Model
         'id_sinh_vien', // Cần cho phép gán id_sinh_vien vì bạn sẽ gán giá trị thủ công
         'anh_the_sinh_vien',
         'lop',
-        'chuyen_nganh',
+        'id_nganh',
     ];
 
     /**
@@ -37,5 +37,12 @@ class SinhVien extends Model
         // 'id_sinh_vien' là foreign key trên bảng SinhVien (local key)
         // 'id_tai_khoan' là primary key trên bảng TaiKhoan (owner key)
         return $this->belongsTo(TaiKhoan::class, 'id_sinh_vien', 'id_tai_khoan');
+    }
+
+    // app/Models/SinhVien.php
+
+    public function chuyenNganh()
+    {
+        return $this->belongsTo(ChuyenNganhSanPham::class, 'id_nganh', 'id_nganh');
     }
 }

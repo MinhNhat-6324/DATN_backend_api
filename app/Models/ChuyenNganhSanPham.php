@@ -22,4 +22,11 @@ class ChuyenNganhSanPham extends Model
     {
         return $this->hasMany(BaiDang::class, 'id_nganh', 'id_nganh');
     }
+    
+    // Một ChuyenNganhSanPham có nhiều SinhVien
+    public function sinhViens()
+    {
+       
+        return $this->hasMany(SinhVien::class, 'id_nganh', 'id_nganh');
+    }
 }
