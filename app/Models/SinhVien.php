@@ -39,10 +39,8 @@ class SinhVien extends Model
         return $this->belongsTo(TaiKhoan::class, 'id_sinh_vien', 'id_tai_khoan');
     }
 
-    // app/Models/SinhVien.php
-
-    public function chuyenNganh()
+    public function chuyenNganhSanPham() // Đổi tên hàm cho rõ ràng hơn (ChuyenNganhSanpham)
     {
-        return $this->belongsTo(ChuyenNganhSanPham::class, 'id_nganh', 'id_nganh');
+        return $this->belongsTo(ChuyenNganhSanpham::class, 'id_nganh', 'id_nganh');
     }
 }

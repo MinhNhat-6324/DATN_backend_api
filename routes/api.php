@@ -36,10 +36,8 @@ Route::get('/tai-khoan/danhsach', [TaiKhoanController::class, 'danh_sach_tai_kho
 Route::get('/tai-khoan/pending', [TaiKhoanController::class, 'danh_sach_cho']); 
 Route::apiResource('tai-khoan', TaiKhoanController::class);
 
-// Route cho chức năng đổi mật khẩu
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/tai-khoan/{id}/change-password', [TaiKhoanController::class, 'changePassword']);
-});
+Route::post('/tai-khoan/{id}/change-password', [TaiKhoanController::class, 'changePassword']);
+
 
 // Routes cho Thông báo
 Route::prefix('thongbao')->group(function () {
