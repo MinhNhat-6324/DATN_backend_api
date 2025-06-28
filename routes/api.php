@@ -41,10 +41,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tai-khoan/{id}/change-password', [TaiKhoanController::class, 'changePassword']);
 });
 
-// Route cho chức năng thông báo
-
-Route::post('/thongbao/tai-khoan', [ThongBaoController::class, 'guiThongBaoTaiKhoan']);
-Route::get('/thongbao/nguoidung/{idTaiKhoan}', [ThongBaoController::class, 'layThongBaoTheoTaiKhoan']);
+// Routes cho Thông báo
+Route::prefix('thongbao')->group(function () {
+    Route::post('/tai-khoan', [ThongBaoController::class, 'guiThongBaoTaiKhoan']);
+    Route::get('/nguoidung/{idTaiKhoan}', [ThongBaoController::class, 'layThongBaoTheoTaiKhoan']);
+    Route::patch('/{idThongBao}', [ThongBaoController::class, 'markAsRead']); // Hoặc dùng put nếu bạn thích
+});
 
 //Bai đăng
 Route::get('/bai-dang', [BaiDangController::class, 'index']);

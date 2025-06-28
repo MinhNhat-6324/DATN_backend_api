@@ -187,7 +187,7 @@ public function danh_sach_tai_khoan(Request $request)
             'ho_ten' => 'required|string|max:100',
             'mat_khau' => 'required|string|min:6',
             'gioi_tinh' => 'required|boolean',
-            'so_dien_thoai' => 'nullable|string|max:20',
+            'so_dien_thoai' => 'required|string|max:20',
             'anh_dai_dien' => 'nullable|image|max:2048',
             'loai_tai_khoan' => 'required|boolean',
             'trang_thai' => 'nullable|boolean',
@@ -205,7 +205,7 @@ public function danh_sach_tai_khoan(Request $request)
         $taiKhoan->ho_ten = $validatedData['ho_ten'];
         $taiKhoan->mat_khau = Hash::make($validatedData['mat_khau']);
         $taiKhoan->gioi_tinh = $validatedData['gioi_tinh'];
-        $taiKhoan->so_dien_thoai = $validatedData['so_dien_thoai'] ?? null;
+        $taiKhoan->so_dien_thoai = $validatedData['so_dien_thoai'];
         $taiKhoan->loai_tai_khoan = $validatedData['loai_tai_khoan'];
         $taiKhoan->trang_thai = $validatedData['trang_thai'] ?? 0;
 
@@ -348,7 +348,7 @@ public function update(Request $request, $id)
                 'gioi_tinh' => 'sometimes|boolean',
                 'anh_dai_dien' => 'sometimes|nullable|string|max:255',
                 'anh_dai_dien_file' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // 2MB
-                'so_dien_thoai' => 'sometimes|nullable|string|max:20',
+                'so_dien_thoai' => 'sometimes|string|max:20',
                 'trang_thai' => 'sometimes|integer|in:0,1,2',
                 'loai_tai_khoan' => 'sometimes|boolean',
 
@@ -372,7 +372,9 @@ public function update(Request $request, $id)
             $taiKhoan->gioi_tinh = $request->input('gioi_tinh', $taiKhoan->gioi_tinh); // Giữ giá trị cũ nếu không gửi lên
             // Dòng này sẽ được thay thế bằng logic xử lý file bên dưới
             // $taiKhoan->anh_dai_dien = $request->anh_dai_dien;
-            $taiKhoan->so_dien_thoai = $request->so_dien_thoai;
+            if ($request->has('so_dien_thoai')) {
+                $taiKhoan->so_dien_thoai = $request->so_dien_thoai;
+            }
 
             // --- BẮT ĐẦU PHẦN SỬA ĐỔI CHO ẢNH ĐẠI DIỆN ---
             if ($request->hasFile('anh_dai_dien_file')) {
