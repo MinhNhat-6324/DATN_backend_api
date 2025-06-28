@@ -18,7 +18,7 @@ class ChuyenNganhSanPham extends Model
     ];
 
     // Một ChuyenNganhSanPham có thể có nhiều BaiDang.
-    public function baiDangs()
+    public function baiDang()
     {
         return $this->hasMany(BaiDang::class, 'id_nganh', 'id_nganh');
     }

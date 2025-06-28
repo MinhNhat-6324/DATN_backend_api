@@ -59,3 +59,9 @@ Route::get('/bai-dang/loai/{id_loai}', [BaiDangController::class, 'getByLoai']);
 
 //Ngành
 Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);
+
+//Loai
+Route::get('/loai', [LoaiSanPhamController::class, 'index']);
+
+//sinh viên 
+Route::get('/sinh-vien/{id}', [SinhVienController::class, 'show']);
