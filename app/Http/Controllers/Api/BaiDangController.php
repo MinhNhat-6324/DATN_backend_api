@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BaiDang;
+use App\Models\AnhBaiDang; // ✅ thêm dòng này
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage; // ✅ thêm dòng này
+use Carbon\Carbon;
 
 class BaiDangController extends Controller
 {

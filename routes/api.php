@@ -54,6 +54,7 @@ Route::get('/bai-dang/nganh/{id_nganh}/loai/{id_loai}', [BaiDangController::clas
 Route::get('/bai-dang/loc/{id_nganh}/{id_loai}/{tieu_de}', [BaiDangController::class, 'locBaiDang']);
 Route::get('/bai-dang/loai/{id_loai}/tieu-de/{tieu_de}', [BaiDangController::class, 'locTheoLoaiVaTieuDe']);
 Route::get('/bai-dang/loai/{id_loai}', [BaiDangController::class, 'getByLoai']);
+Route::post('/bai-dang', [BaiDangController::class, 'store']);
 
 //Ngành
 Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);
