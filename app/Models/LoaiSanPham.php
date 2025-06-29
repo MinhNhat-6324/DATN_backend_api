@@ -18,7 +18,7 @@ class LoaiSanPham extends Model
     ];
 
     // Một loại có nhiều bài đăng
-    public function baiDangs()
+    public function baiDang()
     {
         return $this->hasMany(BaiDang::class, 'id_loai', 'id_loai');
     }

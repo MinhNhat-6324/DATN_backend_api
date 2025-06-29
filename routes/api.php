@@ -56,3 +56,6 @@ Route::get('/loai', [LoaiSanPhamController::class, 'index']);
 
 //sinh viên 
 Route::get('/sinh-vien/{id}', [SinhVienController::class, 'show']);
+
+// báo cáo
+Route::post('/bao-cao/bai-dang/{id_bai_dang}', [BaoCaoController::class, 'postByBaiDang']);

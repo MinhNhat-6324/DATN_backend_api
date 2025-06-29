@@ -8,7 +8,7 @@ use App\Models\SinhVien; // Import Model SinhVien (để lưu thông tin sinh vi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash; // Để mã hóa mật khẩu
 use Illuminate\Validation\ValidationException; // Để bắt lỗi validation
-
+use Illuminate\Support\Str;
 class TaiKhoanController extends Controller
 {
     /**

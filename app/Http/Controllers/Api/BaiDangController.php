@@ -259,7 +259,54 @@ public function getByLoai($id_loai)
 
     return response()->json($baiDangs);
 }
+/**
+     * POST /api/bai-dang
+     * Tạo một bài đăng mới và lưu ảnh kèm theo
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'id_tai_khoan' => 'required|integer|exists:TaiKhoan,id_tai_khoan',
+            'tieu_de' => 'required|string|max:255',
+            'gia' => 'required|numeric',
+            'do_moi' => 'required|numeric|min:0|max:100',
+            'id_loai' => 'required|integer|exists:LoaiSanPham,id_loai',
+            'id_nganh' => 'required|integer|exists:ChuyenNganhSanPham,id_nganh',
+            'hinh_anh' => 'nullable|array',
+            'hinh_anh.*' => 'image|mimes:jpeg,png,jpg|max:5120',
+        ]);
 
+        // Tạo bài đăng
+        $baiDang = BaiDang::create([
+            'id_tai_khoan' => $request->id_tai_khoan,
+            'tieu_de' => $request->tieu_de,
+            'gia' => $request->gia,
+            'do_moi' => $request->do_moi,
+            'id_loai' => $request->id_loai,
+            'id_nganh' => $request->id_nganh,
+            'ngay_dang' => Carbon::now(),
+            'trang_thai' => 'dang', // hoặc giá trị mặc định
+        ]);
+
+        // Nếu có ảnh được gửi kèm, lưu chúng
+        if ($request->hasFile('hinh_anh')) {
+            foreach ($request->file('hinh_anh') as $index => $image) {
+                $path = $image->store('public/hinh_anh_bai_dang');
+                $url = Storage::url($path); // ví dụ: /storage/hinh_anh_bai_dang/abc.jpg
+
+                AnhBaiDang::create([
+                    'id_bai_dang' => $baiDang->id_bai_dang,
+                    'duong_dan' => $url,
+                    'thu_tu' => $index + 1,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Bài đăng đã được tạo thành công.',
+            'id_bai_dang' => $baiDang->id_bai_dang
+        ], 201);
+    }
 
 
 }

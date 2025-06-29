@@ -22,13 +22,13 @@ class BaoCao extends Model
         'trang_thai',
     ];
 
-    // Một BaoCao liên quan đến một BaiDang.
+    // Một báo cáo thuộc về một bài đăng
     public function baiDang()
     {
         return $this->belongsTo(BaiDang::class, 'ma_bai_dang', 'id_bai_dang');
     }
 
-    // Một BaoCao được tạo bởi một TaiKhoan.
+    // Một báo cáo được tạo bởi một tài khoản
     public function taiKhoanBaoCao()
     {
         return $this->belongsTo(TaiKhoan::class, 'id_tai_khoan_bao_cao', 'id_tai_khoan');
