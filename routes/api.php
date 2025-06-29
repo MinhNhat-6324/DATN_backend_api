@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\TinNhanController;
 use App\Http\Controllers\Api\BaoCaoController;
 use App\Http\Controllers\Api\LoginController;
 use App\Http\Controllers\Api\RegisterController;
+use App\Http\Controllers\Api\ThongBaoController;
 
 // Kiểm tra đăng nhập
 Route::post('/login', [LoginController::class, 'login']);
@@ -31,12 +32,18 @@ Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'inde
 
 // Route cho API tài khoản
 Route::get('/tai-khoan', [TaiKhoanController::class, 'index']); // Route lấy danh sách
+Route::get('/tai-khoan/danhsach', [TaiKhoanController::class, 'danh_sach_tai_khoan']); 
 Route::get('/tai-khoan/pending', [TaiKhoanController::class, 'danh_sach_cho']); 
 Route::apiResource('tai-khoan', TaiKhoanController::class);
 
-// Route cho chức năng đổi mật khẩu
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/tai-khoan/change-password', [TaiKhoanController::class, 'changePassword']);
+Route::post('/tai-khoan/{id}/change-password', [TaiKhoanController::class, 'changePassword']);
+
+
+// Routes cho Thông báo
+Route::prefix('thongbao')->group(function () {
+    Route::post('/tai-khoan', [ThongBaoController::class, 'guiThongBaoTaiKhoan']);
+    Route::get('/nguoidung/{idTaiKhoan}', [ThongBaoController::class, 'layThongBaoTheoTaiKhoan']);
+    Route::patch('/{idThongBao}', [ThongBaoController::class, 'markAsRead']); // Hoặc dùng put nếu bạn thích
 });
 
 //Bai đăng

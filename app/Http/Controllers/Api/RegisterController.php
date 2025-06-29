@@ -29,7 +29,7 @@ class RegisterController extends Controller
                 'email' => 'required|string|email|max:255|unique:TaiKhoan,email|ends_with:@caothang.edu.vn',
                 'ho_ten' => 'required|string|max:255',
                 'mat_khau' => 'required|string|min:8|confirmed',
-                'sdt' => 'nullable|string|max:20',
+                'sdt' => 'required|string|max:20',
                 'gioi_tinh' => 'nullable|integer|in:0,1',
             ]);
 
