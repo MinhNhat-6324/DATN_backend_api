@@ -70,27 +70,32 @@ class BaiDangController extends Controller
      * GET /api/bai-dang/{id}
      */
     public function show($id)
-    {
-        $baiDang = BaiDang::with(['anhBaiDang:id_bai_dang,duong_dan,thu_tu'])
-            ->select([
-                'id_bai_dang',
-                'id_tai_khoan',
-                'tieu_de',
-                'gia',
-                'do_moi',
-                'trang_thai',
-                'ngay_dang',
-                'id_loai',
-                'id_nganh',
-            ])
-            ->find($id);
+{
+    $baiDang = BaiDang::with([
+            'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
+            'chuyenNganhSanPham:id_nganh,ten_nganh',
+            'loaiSanPham:id_loai,ten_loai' // ✅ thêm dòng này
+        ])
+        ->select([
+            'id_bai_dang',
+            'id_tai_khoan',
+            'tieu_de',
+            'gia',
+            'do_moi',
+            'trang_thai',
+            'ngay_dang',
+            'id_loai',
+            'id_nganh',
+        ])
+        ->find($id);
 
-        if (!$baiDang) {
-            return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
-        }
-
-        return response()->json($baiDang);
+    if (!$baiDang) {
+        return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
     }
+
+    return response()->json($baiDang);
+}
+
 
     /**
      * GET /api/bai-dang/nganh/{id_nganh}/loai/{id_loai}
@@ -288,4 +293,120 @@ class BaiDangController extends Controller
             'id_bai_dang' => $baiDang->id_bai_dang
         ], 201);
     }
+
+    /**
+ * GET /api/bai-dang/nguoi-dung/{id_tai_khoan}
+ */
+public function getByTaiKhoan($id_tai_khoan)
+{
+    $baiDangs = BaiDang::with([
+            'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
+            'chuyenNganhSanPham:id_nganh,ten_nganh'
+        ])
+        ->select([
+            'id_bai_dang',
+            'id_tai_khoan',
+            'tieu_de',
+            'gia',
+            'do_moi',
+            'trang_thai',
+            'ngay_dang',
+            'id_loai',
+            'id_nganh',
+        ])
+        ->where('id_tai_khoan', $id_tai_khoan)
+        ->orderByDesc('ngay_dang')
+        ->get();
+
+    return response()->json($baiDangs);
+}
+public function update(Request $request, $id)
+{
+    $baiDang = BaiDang::findOrFail($id);
+
+    $baiDang->tieu_de = $request->input('tieu_de');
+    $baiDang->gia = $request->input('gia');
+    $baiDang->do_moi = $request->input('do_moi');
+    $baiDang->id_loai = $request->input('id_loai');
+    $baiDang->id_nganh = $request->input('id_nganh');
+    $baiDang->save();
+
+    // ✅ Xoá ảnh cũ nếu cần
+    if ($request->has('hinh_anh_can_xoa')) {
+        foreach ($request->hinh_anh_can_xoa as $fileName) {
+            $path = 'hinh_anh_bai_dang/' . $fileName;
+
+            // Xoá file vật lý
+            Storage::disk('public')->delete($path);
+
+            // Xoá bản ghi trong DB
+            AnhBaiDang::where('id_bai_dang', $baiDang->id_bai_dang)
+                ->where('duong_dan', '/storage/' . $path)
+                ->delete();
+        }
+    }
+
+    // ✅ Thêm ảnh mới
+    if ($request->hasFile('hinh_anh')) {
+        foreach ($request->file('hinh_anh') as $index => $image) {
+            $path = $image->store('hinh_anh_bai_dang', 'public');
+            AnhBaiDang::create([
+                'id_bai_dang' => $baiDang->id_bai_dang,
+                'duong_dan' => '/storage/' . $path,
+                'thu_tu' => $index + 1,
+            ]);
+        }
+    }
+
+    return response()->json(['message' => 'Cập nhật thành công'], 200);
+}
+/**
+ * DELETE /api/bai-dang/{id}
+ */
+public function destroy($id)
+{
+    $baiDang = BaiDang::find($id);
+
+    if (!$baiDang) {
+        return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
+    }
+
+    // ✅ Xoá ảnh vật lý và bản ghi ảnh liên quan
+    $anhBaiDangs = AnhBaiDang::where('id_bai_dang', $baiDang->id_bai_dang)->get();
+
+    foreach ($anhBaiDangs as $anh) {
+        // Lấy đường dẫn tương đối từ URL
+        $relativePath = str_replace('/storage/', '', $anh->duong_dan);
+
+        // Xoá file trong thư mục public
+        Storage::disk('public')->delete($relativePath);
+    }
+
+    // Xoá bản ghi ảnh
+    AnhBaiDang::where('id_bai_dang', $baiDang->id_bai_dang)->delete();
+
+    // Xoá bài đăng
+    $baiDang->delete();
+
+    return response()->json(['message' => 'Bài đăng đã được xoá.'], 200);
+}
+public function doiTrangThai(Request $request, $id)
+{
+    $baiDang = BaiDang::find($id);
+    if (!$baiDang) {
+        return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
+    }
+
+    $trangThaiMoi = $request->input('trang_thai');
+    if (!in_array($trangThaiMoi, ['san_sang', 'dang_giao_dich'])) {
+        return response()->json(['message' => 'Trạng thái không hợp lệ.'], 400);
+    }
+
+    $baiDang->trang_thai = $trangThaiMoi;
+    $baiDang->save();
+
+    return response()->json(['message' => 'Cập nhật trạng thái thành công.']);
+}
+
+
 }
