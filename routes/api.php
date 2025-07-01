@@ -35,7 +35,7 @@ Route::get('/tai-khoan', [TaiKhoanController::class, 'index']); // Route lấy d
 Route::get('/tai-khoan/danhsach', [TaiKhoanController::class, 'danh_sach_tai_khoan']); 
 Route::get('/tai-khoan/pending', [TaiKhoanController::class, 'danh_sach_cho']); 
 Route::apiResource('tai-khoan', TaiKhoanController::class);
-
+Route::get('/tai-khoan/{id}', [TaiKhoanController::class, 'show']);
 Route::post('/tai-khoan/{id}/change-password', [TaiKhoanController::class, 'changePassword']);
 
 
