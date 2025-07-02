@@ -19,6 +19,7 @@ class OtpVerification extends Model
         'email',
         'otp_code',
         'expires_at',
+        'type',
     ];
 
     protected $casts = [

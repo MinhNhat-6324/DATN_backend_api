@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\BaoCaoController;
 use App\Http\Controllers\Api\LoginController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\ThongBaoController;
+use App\Http\Controllers\Api\PasswordResetController;
 
 // Kiểm tra đăng nhập
 Route::post('/login', [LoginController::class, 'login']);
@@ -66,3 +67,11 @@ Route::get('/sinh-vien/{id}', [SinhVienController::class, 'show']);
 
 // báo cáo
 Route::post('/bao-cao/bai-dang/{id_bai_dang}', [BaoCaoController::class, 'postByBaiDang']);
+Route::get('/bao-cao', [BaoCaoController::class, 'index']);
+Route::post('/bao-cao/{id}/go-bai-dang', [BaoCaoController::class, 'goBaiDang']);
+Route::post('/bao-cao/{id}/tu-choi', [BaoCaoController::class, 'tuChoiBaoCao']);  
+
+// --- Route cho chức năng Quên mật khẩu ---
+Route::post('password/forgot', [PasswordResetController::class, 'sendResetOtp']);
+Route::post('password/verify-reset-otp', [PasswordResetController::class, 'verifyResetOtp']);
+Route::post('password/reset', [PasswordResetController::class, 'resetPassword']);
