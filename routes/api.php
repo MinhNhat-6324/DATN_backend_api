@@ -72,3 +72,9 @@ Route::get('/sinh-vien/{id}', [SinhVienController::class, 'show']);
 
 // báo cáo
 Route::post('/bao-cao/bai-dang/{id_bai_dang}', [BaoCaoController::class, 'postByBaiDang']);
+
+// tin nhắn:
+Route::get('/tin-nhan/giua/{user1}/{user2}', [TinNhanController::class, 'getTinNhanGiuaHaiNguoi']);
+Route::get('/tin-nhan/danh-sach-doi-tuong/{userId}', [TinNhanController::class, 'danhSachDoiTuongChat']);
+Route::post('/gui-tin-nhan', [TinNhanController::class, 'store']);
+Route::put('/tin-nhan/{id}', [TinNhanController::class, 'update']);

@@ -9,7 +9,9 @@ class AnhBaiDang extends Model
 {
     use HasFactory;
 
-    protected $table = 'AnhBaiDang';
+    // ✅ Sửa dòng này cho đúng tên bảng
+    protected $table = 'anhbaidang'; // <-- chính xác tên bảng trong MySQL
+
     protected $primaryKey = 'id_anh';
     public $timestamps = false;
 
@@ -19,7 +21,6 @@ class AnhBaiDang extends Model
         'thu_tu',
     ];
 
-    // Một AnhBaiDang thuộc về một BaiDang.
     public function baiDang()
     {
         return $this->belongsTo(BaiDang::class, 'id_bai_dang', 'id_bai_dang');
