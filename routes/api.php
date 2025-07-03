@@ -77,6 +77,7 @@ Route::get('/bao-cao', [BaoCaoController::class, 'index']);
 Route::post('/bao-cao/{id}/go-bai-dang', [BaoCaoController::class, 'goBaiDang']);
 Route::post('/bao-cao/{id}/tu-choi', [BaoCaoController::class, 'tuChoiBaoCao']);  
 
+
 // --- Route cho chức năng Quên mật khẩu ---
 Route::post('password/forgot', [PasswordResetController::class, 'sendResetOtp']);
 Route::post('password/verify-reset-otp', [PasswordResetController::class, 'verifyResetOtp']);

@@ -8,9 +8,20 @@ use App\Models\BaiDang; // Đảm bảo đã import model BaiDang
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB; // Thêm dòng này để sử dụng transaction
+use App\Models\TaiKhoan; // <<< THÊM DÒNG NÀY ĐỂ CÓ THỂ EAGER LOAD QUAN HỆ
+use App\Http\Controllers\Api\ThongBaoController; // <<< THÊM DÒNG NÀY ĐỂ IMPORT ThongBaoController
 
 class BaoCaoController extends Controller
 {
+    // <<< THÊM PHẦN CONSTRUCTOR NÀY ĐỂ INJECT ThongBaoController
+    protected $thongBaoController;
+
+    public function __construct(ThongBaoController $thongBaoController)
+    {
+        $this->thongBaoController = $thongBaoController;
+    }
+    // >>> KẾT THÚC PHẦN THÊM CONSTRUCTOR
+
     // GET /api/bao-cao
     public function index()
     {
@@ -147,7 +158,8 @@ class BaoCaoController extends Controller
     // POST /api/bao-cao/{id}/go-bai-dang
     public function goBaiDang(Request $request, $id)
     {
-        $baoCao = BaoCao::with('baiDang')->find($id);
+        // <<< SỬA ĐỔI EAGER LOADING ĐỂ LẤY THÔNG TIN TaiKhoan CỦA BaiDang
+        $baoCao = BaoCao::with('baiDang.taiKhoan')->find($id);
 
         if (!$baoCao) {
             return response()->json(['message' => 'Không tìm thấy báo cáo.'], 404);
@@ -165,14 +177,33 @@ class BaoCaoController extends Controller
             // 1. Cập nhật trạng thái bài đăng thành 'vi_pham'
             if ($baoCao->baiDang) {
                 $baoCao->baiDang->update(['trang_thai' => 'vi_pham']);
+
+                // <<< GỬI THÔNG BÁO ĐẾN CHỦ BÀI VIẾT (nếu có)
+                if ($baoCao->baiDang->taiKhoan) {
+                    $this->thongBaoController->guiThongBaoBaoCao(
+                        'go_bai_viet_chu_bai_viet',
+                        $baoCao->baiDang->taiKhoan->id_tai_khoan,
+                        ['tieu_de_bai_viet' => $baoCao->baiDang->tieu_de]
+                    );
+                }
+                // >>> KẾT THÚC GỬI THÔNG BÁO ĐẾN CHỦ BÀI VIẾT
+
             } else {
                 // Xử lý trường hợp bài đăng đã bị xóa trước khi báo cáo được xử lý
                 // Có thể log lại hoặc trả về lỗi nếu bài đăng là bắt buộc
                 // Tuy nhiên, theo yêu cầu thì nếu bài đăng không tồn tại, chỉ cần duyệt báo cáo
+                \Log::warning('Báo cáo ID ' . $id . ' liên kết với bài đăng không tồn tại khi gỡ bài.');
             }
 
             // 2. Cập nhật trạng thái báo cáo thành 'da_xu_ly'
             $baoCao->update(['trang_thai' => 'da_xu_ly']);
+
+            // <<< GỬI THÔNG BÁO CÁM ƠN ĐẾN NGƯỜI BÁO CÁO
+            $this->thongBaoController->guiThongBaoBaoCao(
+                'go_bai_viet_nguoi_bao_cao',
+                $baoCao->id_tai_khoan_bao_cao
+            );
+            // >>> KẾT THÚC GỬI THÔNG BÁO CÁM ƠN
 
             DB::commit(); // Hoàn tất transaction
 
@@ -193,7 +224,7 @@ class BaoCaoController extends Controller
     // POST /api/bao-cao/{id}/tu-choi
     public function tuChoiBaoCao(Request $request, $id)
     {
-        $baoCao = BaoCao::with('baiDang')->find($id);
+        $baoCao = BaoCao::with('baiDang')->find($id); // Vẫn eager load baiDang dù không cập nhật, để có thông tin cần nếu sau này mở rộng
 
         if (!$baoCao) {
             return response()->json(['message' => 'Không tìm thấy báo cáo.'], 404);
@@ -215,6 +246,13 @@ class BaoCaoController extends Controller
 
             // 2. Cập nhật trạng thái báo cáo thành 'da_xu_ly'
             $baoCao->update(['trang_thai' => 'da_xu_ly']);
+
+            // <<< GỬI THÔNG BÁO CÁM ƠN ĐẾN NGƯỜI BÁO CÁO
+            $this->thongBaoController->guiThongBaoBaoCao(
+                'tu_choi_bao_cao_nguoi_bao_cao',
+                $baoCao->id_tai_khoan_bao_cao
+            );
+            // >>> KẾT THÚC GỬI THÔNG BÁO CÁM ƠN
 
             DB::commit(); // Hoàn tất transaction
 
