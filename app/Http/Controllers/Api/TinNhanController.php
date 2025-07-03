@@ -144,28 +144,45 @@ public function getTinNhanGiuaHaiNguoi($user1, $user2)
  */
 public function danhSachDoiTuongChat($userId)
 {
-    // Những người user này đã GỬI tin nhắn TỚI
-    $nguoiNhanIds = TinNhan::where('nguoi_gui', $userId)
-        ->pluck('nguoi_nhan')
-        ->unique();
-
-    $dsNguoiNhan = \App\Models\TaiKhoan::select('id_tai_khoan', 'ho_ten', 'anh_dai_dien')
-        ->whereIn('id_tai_khoan', $nguoiNhanIds)
+    // Lấy tất cả tin nhắn có liên quan tới người dùng
+    $tinNhans = \App\Models\TinNhan::where('nguoi_gui', $userId)
+        ->orWhere('nguoi_nhan', $userId)
+        ->orderByDesc('thoi_gian_gui')
         ->get();
 
-    // Những người đã GỬI tin nhắn ĐẾN user này
-    $nguoiGuiIds = TinNhan::where('nguoi_nhan', $userId)
-        ->pluck('nguoi_gui')
-        ->unique();
+    $doiTuongs = [];
 
-    $dsNguoiGui = \App\Models\TaiKhoan::select('id_tai_khoan', 'ho_ten', 'anh_dai_dien')
-        ->whereIn('id_tai_khoan', $nguoiGuiIds)
+    foreach ($tinNhans as $tn) {
+        $otherId = $tn->nguoi_gui == $userId ? $tn->nguoi_nhan : $tn->nguoi_gui;
+
+        if (!isset($doiTuongs[$otherId])) {
+            $taiKhoan = \App\Models\TaiKhoan::select('id_tai_khoan', 'ho_ten', 'anh_dai_dien')
+                ->where('id_tai_khoan', $otherId)
+                ->first();
+
+            if ($taiKhoan) {
+                $doiTuongs[$otherId] = [
+                    'id_tai_khoan' => $taiKhoan->id_tai_khoan,
+                    'ho_ten' => $taiKhoan->ho_ten,
+                    'anh_dai_dien' => $taiKhoan->anh_dai_dien,
+                    'tin_nhan_cuoi' => $tn->noi_dung,
+                    'thoi_gian' => $tn->thoi_gian_gui,
+                ];
+            }
+        }
+    }
+
+    return response()->json(array_values($doiTuongs));
+}
+
+public function getDanhSachTinNhanTheoNguoiDung($idNguoiDung)
+{
+    $tinNhans = TinNhan::where('nguoi_gui', $idNguoiDung)
+        ->orWhere('nguoi_nhan', $idNguoiDung)
+        ->orderBy('thoi_gian_gui', 'asc')
         ->get();
 
-    return response()->json([
-        'da_gui_toi' => $dsNguoiNhan,
-        'duoc_gui_tu' => $dsNguoiGui,
-    ]);
+    return response()->json($tinNhans);
 }
 
 

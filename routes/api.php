@@ -76,5 +76,7 @@ Route::post('/bao-cao/bai-dang/{id_bai_dang}', [BaoCaoController::class, 'postBy
 // tin nhắn:
 Route::get('/tin-nhan/giua/{user1}/{user2}', [TinNhanController::class, 'getTinNhanGiuaHaiNguoi']);
 Route::get('/tin-nhan/danh-sach-doi-tuong/{userId}', [TinNhanController::class, 'danhSachDoiTuongChat']);
+Route::get('/tin-nhan/nguoi-dung/{id}', [TinNhanController::class, 'getDanhSachTinNhanTheoNguoiDung']);
+
 Route::post('/gui-tin-nhan', [TinNhanController::class, 'store']);
 Route::put('/tin-nhan/{id}', [TinNhanController::class, 'update']);
