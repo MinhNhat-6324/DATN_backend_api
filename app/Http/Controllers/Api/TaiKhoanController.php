@@ -482,7 +482,6 @@ public function update(Request $request, $id)
 
     /**
      * Cập nhật thông tin lớp, chuyên ngành và ảnh thẻ sinh viên cho tài khoản.
-     * Tự động kích hoạt tài khoản (trang_thai = 1) khi cập nhật thành công.
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
