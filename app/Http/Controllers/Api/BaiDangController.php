@@ -398,7 +398,7 @@ public function doiTrangThai(Request $request, $id)
     }
 
     $trangThaiMoi = $request->input('trang_thai');
-    if (!in_array($trangThaiMoi, ['san_sang', 'dang_giao_dich'])) {
+    if (!in_array($trangThaiMoi, ['san_sang', 'dang_giao_dich', 'vi_pham'])) {
         return response()->json(['message' => 'Trạng thái không hợp lệ.'], 400);
     }
 
