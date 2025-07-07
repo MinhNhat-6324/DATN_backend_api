@@ -38,11 +38,10 @@ class LoginController extends Controller
 
         // 3. Kiểm tra tài khoản có tồn tại và mật khẩu có khớp không
         if (!$taiKhoan || !Hash::check($request->password, $taiKhoan->mat_khau)) {
-            // Sử dụng một thông báo chung để tránh tiết lộ thông tin người dùng
             return response()->json([
                 'success' => false,
                 'message' => 'Email hoặc mật khẩu không chính xác.',
-            ], 401); // Mã trạng thái 401: Unauthorized cho lỗi xác thực
+            ], 401);
         }
 
         // 4. Nếu xác thực thành công:

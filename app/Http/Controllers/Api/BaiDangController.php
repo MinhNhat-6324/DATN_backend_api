@@ -24,14 +24,13 @@ class BaiDangController extends Controller
                 'id_bai_dang',
                 'id_tai_khoan',
                 'tieu_de',
-                'gia',
                 'do_moi',
                 'trang_thai',
                 'ngay_dang',
                 'id_loai',
                 'id_nganh',
             ])
-            ->where('trang_thai', 'san_sang') // ✅
+            ->where('trang_thai', 'san_sang')
             ->orderByDesc('ngay_dang')
             ->get();
 
@@ -51,7 +50,6 @@ class BaiDangController extends Controller
             'id_bai_dang',
             'id_tai_khoan',
             'tieu_de',
-            'gia',
             'do_moi',
             'trang_thai',
             'ngay_dang',
@@ -59,7 +57,7 @@ class BaiDangController extends Controller
             'id_nganh',
         ])
         ->where('id_nganh', $id_nganh)
-        ->where('trang_thai', 'san_sang') // ✅
+        ->where('trang_thai', 'san_sang')
         ->orderByDesc('ngay_dang')
         ->get();
 
@@ -74,13 +72,12 @@ class BaiDangController extends Controller
     $baiDang = BaiDang::with([
             'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
             'chuyenNganhSanPham:id_nganh,ten_nganh',
-            'loaiSanPham:id_loai,ten_loai' // ✅ thêm dòng này
+            'loaiSanPham:id_loai,ten_loai'
         ])
         ->select([
             'id_bai_dang',
             'id_tai_khoan',
             'tieu_de',
-            'gia',
             'do_moi',
             'trang_thai',
             'ngay_dang',
@@ -110,7 +107,6 @@ class BaiDangController extends Controller
             'id_bai_dang',
             'id_tai_khoan',
             'tieu_de',
-            'gia',
             'do_moi',
             'trang_thai',
             'ngay_dang',
@@ -118,7 +114,7 @@ class BaiDangController extends Controller
             'id_nganh',
         ])
         ->where('id_nganh', $id_nganh)
-        ->where('trang_thai', 'san_sang'); // ✅
+        ->where('trang_thai', 'san_sang');
 
         if ($id_loai != -1) {
             $baiDangQuery->where('id_loai', $id_loai);
@@ -140,7 +136,6 @@ class BaiDangController extends Controller
                 'id_bai_dang',
                 'id_tai_khoan',
                 'tieu_de',
-                'gia',
                 'do_moi',
                 'trang_thai',
                 'ngay_dang',
@@ -148,7 +143,7 @@ class BaiDangController extends Controller
                 'id_nganh',
             ])
             ->where('tieu_de', 'LIKE', '%' . $tieu_de . '%')
-            ->where('trang_thai', 'san_sang') // ✅
+            ->where('trang_thai', 'san_sang')
             ->orderByDesc('ngay_dang')
             ->get();
 
@@ -168,7 +163,6 @@ class BaiDangController extends Controller
                 'id_bai_dang',
                 'id_tai_khoan',
                 'tieu_de',
-                'gia',
                 'do_moi',
                 'trang_thai',
                 'ngay_dang',
@@ -176,7 +170,7 @@ class BaiDangController extends Controller
                 'id_nganh',
             ])
             ->where('id_nganh', $id_nganh)
-            ->where('trang_thai', 'san_sang'); // ✅
+            ->where('trang_thai', 'san_sang'); 
 
         if ($id_loai != -1) {
             $query->where('id_loai', $id_loai);
@@ -202,7 +196,6 @@ class BaiDangController extends Controller
                 'id_bai_dang',
                 'id_tai_khoan',
                 'tieu_de',
-                'gia',
                 'do_moi',
                 'trang_thai',
                 'ngay_dang',
@@ -210,7 +203,7 @@ class BaiDangController extends Controller
                 'id_nganh',
             ])
             ->where('id_loai', $id_loai)
-            ->where('trang_thai', 'san_sang'); // ✅
+            ->where('trang_thai', 'san_sang');
 
         if ($tieu_de !== null && $tieu_de !== '' && $tieu_de !== '-') {
             $query->where('tieu_de', 'LIKE', '%' . $tieu_de . '%');
@@ -232,7 +225,6 @@ class BaiDangController extends Controller
                 'id_bai_dang',
                 'id_tai_khoan',
                 'tieu_de',
-                'gia',
                 'do_moi',
                 'trang_thai',
                 'ngay_dang',
@@ -240,7 +232,7 @@ class BaiDangController extends Controller
                 'id_nganh',
             ])
             ->where('id_loai', $id_loai)
-            ->where('trang_thai', 'san_sang') // ✅
+            ->where('trang_thai', 'san_sang')
             ->orderByDesc('ngay_dang')
             ->get();
 
@@ -255,7 +247,6 @@ class BaiDangController extends Controller
         $request->validate([
             'id_tai_khoan' => 'required|integer|exists:TaiKhoan,id_tai_khoan',
             'tieu_de' => 'required|string|max:255',
-            'gia' => 'required|numeric',
             'do_moi' => 'required|numeric|min:0|max:100',
             'id_loai' => 'required|integer|exists:LoaiSanPham,id_loai',
             'id_nganh' => 'required|integer|exists:ChuyenNganhSanPham,id_nganh',
@@ -266,7 +257,6 @@ class BaiDangController extends Controller
         $baiDang = BaiDang::create([
             'id_tai_khoan' => $request->id_tai_khoan,
             'tieu_de' => $request->tieu_de,
-            'gia' => $request->gia,
             'do_moi' => $request->do_moi,
             'id_loai' => $request->id_loai,
             'id_nganh' => $request->id_nganh,
@@ -307,7 +297,6 @@ public function getByTaiKhoan($id_tai_khoan)
             'id_bai_dang',
             'id_tai_khoan',
             'tieu_de',
-            'gia',
             'do_moi',
             'trang_thai',
             'ngay_dang',
@@ -325,7 +314,6 @@ public function update(Request $request, $id)
     $baiDang = BaiDang::findOrFail($id);
 
     $baiDang->tieu_de = $request->input('tieu_de');
-    $baiDang->gia = $request->input('gia');
     $baiDang->do_moi = $request->input('do_moi');
     $baiDang->id_loai = $request->input('id_loai');
     $baiDang->id_nganh = $request->input('id_nganh');
@@ -398,7 +386,7 @@ public function doiTrangThai(Request $request, $id)
     }
 
     $trangThaiMoi = $request->input('trang_thai');
-    if (!in_array($trangThaiMoi, ['san_sang', 'dang_giao_dich', 'vi_pham'])) {
+    if (!in_array($trangThaiMoi, ['san_sang', 'da_cho_tang'])) {
         return response()->json(['message' => 'Trạng thái không hợp lệ.'], 400);
     }
 
@@ -407,6 +395,5 @@ public function doiTrangThai(Request $request, $id)
 
     return response()->json(['message' => 'Cập nhật trạng thái thành công.']);
 }
-
 
 }

@@ -29,7 +29,7 @@ class ThongBaoController extends Controller
 
         $noiDung = match ($request->trang_thai) {
             1 => 'Tài khoản của bạn đã có thể hoạt động.',
-            2 => 'Tài khoản của bạn đã bị khóa vì lí do chính sách.',
+            2 => 'Tài khoản của bạn đã bị khóa vì vi phạm quy tắc cộng đồng.',
             default => null
         };
 
