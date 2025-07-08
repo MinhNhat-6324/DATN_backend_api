@@ -19,7 +19,6 @@ class BaiDang extends Model
         'do_moi',
         'id_loai',
         'id_nganh',
-        'gia',
         'ngay_dang',
         'trang_thai',
     ];

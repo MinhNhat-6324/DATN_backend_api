@@ -25,7 +25,7 @@ class BaoCaoController extends Controller
     // GET /api/bao-cao
     public function index()
     {
-        $baoCaos = BaoCao::with(['baiDang', 'taiKhoanBaoCao'])->get();
+        $baoCaos = BaoCao::with(['baiDang.anhBaiDang', 'taiKhoanBaoCao'])->get();
         return response()->json($baoCaos);
     }
 
@@ -107,7 +107,7 @@ class BaoCaoController extends Controller
     // GET /api/bao-cao/{id}
     public function show($id)
     {
-        $baoCao = BaoCao::with(['baiDang', 'taiKhoanBaoCao'])->find($id);
+        $baoCao = BaoCao::with(['baiDang.anhBaiDang', 'taiKhoanBaoCao'])->find($id);
 
         if (!$baoCao) {
             return response()->json(['message' => 'Không tìm thấy báo cáo.'], 404);

@@ -48,6 +48,8 @@ Route::prefix('thongbao')->group(function () {
 });
 
 //Bai đăng
+Route::get('/bai-dang/chuyen-nganh/chung', [BaiDangController::class, 'getBaiDangChuyenNganhChung']);
+
 Route::get('/bai-dang', [BaiDangController::class, 'index']);
 Route::get('/bai-dang/nganh/{id_nganh}', [BaiDangController::class, 'getByNganh']);
 Route::get('/bai-dang/tieu-de/{tieu_de}', [BaiDangController::class, 'getByTieuDe']);
@@ -85,7 +87,7 @@ Route::post('password/reset', [PasswordResetController::class, 'resetPassword'])
 
 // tin nhắn:
 Route::get('/tin-nhan/giua/{user1}/{user2}', [TinNhanController::class, 'getTinNhanGiuaHaiNguoi']);
-Route::get('/tin-nhan/danh-sach-doi-tuong/{userId}', [TinNhanController::class, 'danhSachDoiTuongChat']);
+// Route::get('/tin-nhan/danh-sach-doi-tuong/{userId}', [TinNhanController::class, 'danhSachDoiTuongChat']);
 Route::get('/tin-nhan/nguoi-dung/{id}', [TinNhanController::class, 'getDanhSachTinNhanTheoNguoiDung']);
 
 Route::post('/gui-tin-nhan', [TinNhanController::class, 'store']);
