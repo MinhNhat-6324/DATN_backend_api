@@ -7,29 +7,33 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Address;
 
 class TinNhanEmail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $tenNguoiGui;
-    public $noiDung;
+    public string $tenNguoiGui;
+    public string $emailNguoiGui;
+    public string $noiDung;
 
     /**
-     * Tạo một instance mới.
+     * Tạo instance mới.
      */
-    public function __construct(string $tenNguoiGui, string $noiDung)
+    public function __construct(string $tenNguoiGui, string $emailNguoiGui, string $noiDung)
     {
         $this->tenNguoiGui = $tenNguoiGui;
+        $this->emailNguoiGui = $emailNguoiGui;
         $this->noiDung = $noiDung;
     }
 
     /**
-     * Tiêu đề email.
+     * Tiêu đề và người gửi email.
      */
     public function envelope(): Envelope
     {
         return new Envelope(
+            from: new Address($this->emailNguoiGui, $this->tenNguoiGui),
             subject: 'Tin nhắn từ ' . $this->tenNguoiGui,
         );
     }
@@ -40,12 +44,12 @@ class TinNhanEmail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.tin_nhan', // Tên view chứa nội dung email
+            view: 'emails.tin_nhan',
         );
     }
 
     /**
-     * File đính kèm (nếu có).
+     * File đính kèm (không có).
      */
     public function attachments(): array
     {

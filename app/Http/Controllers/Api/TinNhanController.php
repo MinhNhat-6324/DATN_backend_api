@@ -201,9 +201,11 @@ public function sendEmailAndSave(Request $request)
 
     // Gửi email: ĐÚNG THỨ TỰ (tên người gửi, nội dung)
     Mail::to($nguoiNhan->email)->send(new TinNhanEmail(
-        $nguoiGui->ho_ten,
-        $request->noi_dung
+    $nguoiGui->ho_ten,
+    $nguoiGui->email,
+    $request->noi_dung
     ));
+
 
     // Lưu vào bảng tin_nhan
     $tinNhan = TinNhan::create([

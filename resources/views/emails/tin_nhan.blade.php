@@ -6,7 +6,7 @@
 </head>
 <body>
     <h3>📬 Bạn có một tin nhắn mới!</h3>
-    <p><strong>{{ $tenNguoiGui }}</strong> đã gửi bạn tin nhắn:</p>
+    <p><strong>{{ $tenNguoiGui }}</strong> ({{ $emailNguoiGui }}) đã gửi bạn tin nhắn:</p>
     <blockquote style="color: #333; background: #f5f5f5; padding: 10px; border-left: 5px solid #0079CF;">
         {{ $noiDung }}
     </blockquote>
