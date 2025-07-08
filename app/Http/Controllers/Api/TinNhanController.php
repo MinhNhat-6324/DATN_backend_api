@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\TinNhan; // Import Model TinNhan
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TinNhanEmail;
+use App\Models\TaiKhoan;
 class TinNhanController extends Controller
 {
     /**
@@ -183,6 +185,39 @@ public function getDanhSachTinNhanTheoNguoiDung($idNguoiDung)
         ->get();
 
     return response()->json($tinNhans);
+}
+
+public function sendEmailAndSave(Request $request)
+{
+    $request->validate([
+        'nguoi_gui' => 'required|integer',
+        'nguoi_nhan' => 'required|integer',
+        'bai_dang_lien_quan' => 'nullable|integer',
+        'noi_dung' => 'required|string',
+    ]);
+
+    $nguoiGui = TaiKhoan::findOrFail($request->nguoi_gui);
+    $nguoiNhan = TaiKhoan::findOrFail($request->nguoi_nhan);
+
+    // Gửi email: ĐÚNG THỨ TỰ (tên người gửi, nội dung)
+    Mail::to($nguoiNhan->email)->send(new TinNhanEmail(
+        $nguoiGui->ho_ten,
+        $request->noi_dung
+    ));
+
+    // Lưu vào bảng tin_nhan
+    $tinNhan = TinNhan::create([
+        'nguoi_gui' => $request->nguoi_gui,
+        'nguoi_nhan' => $request->nguoi_nhan,
+        'bai_dang_lien_quan' => $request->bai_dang_lien_quan,
+        'noi_dung' => $request->noi_dung,
+        'thoi_gian_gui' => now(),
+    ]);
+
+    return response()->json([
+        'message' => 'Gửi email thành công và đã lưu vào tin_nhan',
+        'tin_nhan' => $tinNhan,
+    ]);
 }
 
 

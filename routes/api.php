@@ -90,3 +90,4 @@ Route::get('/tin-nhan/nguoi-dung/{id}', [TinNhanController::class, 'getDanhSachT
 
 Route::post('/gui-tin-nhan', [TinNhanController::class, 'store']);
 Route::put('/tin-nhan/{id}', [TinNhanController::class, 'update']);
+Route::middleware('auth:sanctum')->post('/gui-email-luu-tin-nhan', [TinNhanController::class, 'sendEmailAndSave']);
