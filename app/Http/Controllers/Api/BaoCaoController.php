@@ -183,7 +183,11 @@ class BaoCaoController extends Controller
                     $this->thongBaoController->guiThongBaoBaoCao(
                         'go_bai_viet_chu_bai_viet',
                         $baoCao->baiDang->taiKhoan->id_tai_khoan,
-                        ['tieu_de_bai_viet' => $baoCao->baiDang->tieu_de]
+                        [
+                            'tieu_de_bai_viet' => $baoCao->baiDang->tieu_de,
+                            'id_bai_dang' => $baoCao->baiDang->id_bai_dang, // thêm id bài để có link
+                            'ly_do_go' => $baoCao->ly_do ?? 'Không rõ lý do', // <<< thêm lý do
+                        ]
                     );
                 }
                 // >>> KẾT THÚC GỬI THÔNG BÁO ĐẾN CHỦ BÀI VIẾT

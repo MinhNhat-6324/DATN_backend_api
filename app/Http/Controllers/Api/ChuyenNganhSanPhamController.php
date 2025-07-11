@@ -30,4 +30,22 @@ class ChuyenNganhSanPhamController extends Controller
             ], 500);
         }
     }
+    public function thongKeBaiDangTheoChuyenNganh()
+{
+    try {
+        // Lấy tất cả chuyên ngành và đếm số bài đăng liên quan (sử dụng withCount)
+        $thongKe = ChuyenNganhSanPham::withCount('baiDang')->get(['id_nganh', 'ten_nganh']);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $thongKe
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Không thể thống kê bài đăng theo chuyên ngành.',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 }

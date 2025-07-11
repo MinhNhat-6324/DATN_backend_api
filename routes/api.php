@@ -32,37 +32,49 @@ Route::post('/register/admin', [RegisterController::class, 'registerAdmin']);
 Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);   
 
 // Route cho API tài khoản
-Route::get('/tai-khoan', [TaiKhoanController::class, 'index']); // Route lấy danh sách
-Route::get('/tai-khoan/danhsach', [TaiKhoanController::class, 'danh_sach_tai_khoan']); 
-Route::get('/tai-khoan/pending', [TaiKhoanController::class, 'danh_sach_cho']); 
-Route::apiResource('tai-khoan', TaiKhoanController::class);
-Route::get('/tai-khoan/{id}', [TaiKhoanController::class, 'show']);
-Route::post('/tai-khoan/{id}/change-password', [TaiKhoanController::class, 'changePassword']);
 
+Route::prefix('tai-khoan')->group(function () {
+    Route::get('danhsach', [TaiKhoanController::class, 'danh_sach_tai_khoan']);
+    Route::get('pending', [TaiKhoanController::class, 'danh_sach_cho']);
+    Route::post('{id}/change-password', [TaiKhoanController::class, 'changePassword']);
+    Route::get('thong-ke', [TaiKhoanController::class, 'thongKeTong']);
+    Route::get('/thong-ke-bieu-do', [TaiKhoanController::class, 'thongKeSeries']);
+});
+Route::apiResource('tai-khoan', TaiKhoanController::class);
+Route::apiResource('tai-khoan', TaiKhoanController::class)->except(['index', 'show']);
 
 // Routes cho Thông báo
 Route::prefix('thongbao')->group(function () {
-    Route::post('/tai-khoan', [ThongBaoController::class, 'guiThongBaoTaiKhoan']);
+    Route::post('/tai-khoan/cap-nhat-trang-thai', [ThongBaoController::class, 'capNhatTrangThaiTaiKhoan']);
     Route::get('/nguoidung/{idTaiKhoan}', [ThongBaoController::class, 'layThongBaoTheoTaiKhoan']);
     Route::patch('/{idThongBao}', [ThongBaoController::class, 'markAsRead']); // Hoặc dùng put nếu bạn thích
+    Route::post('/tai-khoan/gui-yeu-cau-mo-khoa', [ThongBaoController::class, 'guiYeuCauMoKhoa']);
 });
 
-//Bai đăng
-Route::get('/bai-dang/chuyen-nganh/chung', [BaiDangController::class, 'getBaiDangChuyenNganhChung']);
+// 📊 Thống kê
+Route::get('/bai-dang/thong-ke-trang-thai', [BaiDangController::class, 'thongKeTheoTrangThai']);
+Route::get('/chuyen-nganh-san-pham/thong-ke-bai-dang', [ChuyenNganhSanPhamController::class, 'thongKeBaiDangTheoChuyenNganh']);
 
-Route::get('/bai-dang', [BaiDangController::class, 'index']);
-Route::get('/bai-dang/nganh/{id_nganh}', [BaiDangController::class, 'getByNganh']);
+
+// 🔎 Lọc & tìm kiếm
 Route::get('/bai-dang/tieu-de/{tieu_de}', [BaiDangController::class, 'getByTieuDe']);
+Route::get('/bai-dang/nganh/{id_nganh}', [BaiDangController::class, 'getByNganh']);
 Route::get('/bai-dang/nganh/{id_nganh}/loai/{id_loai}', [BaiDangController::class, 'getByNganhVaLoai']);
 Route::get('/bai-dang/loc/{id_nganh}/{id_loai}/{tieu_de}', [BaiDangController::class, 'locBaiDang']);
 Route::get('/bai-dang/loai/{id_loai}/tieu-de/{tieu_de}', [BaiDangController::class, 'locTheoLoaiVaTieuDe']);
 Route::get('/bai-dang/loai/{id_loai}', [BaiDangController::class, 'getByLoai']);
+
+// 📝 CRUD chính
+Route::get('/bai-dang', [BaiDangController::class, 'index']);
 Route::post('/bai-dang', [BaiDangController::class, 'store']);
-Route::get('/bai-dang/nguoi-dung/{id_tai_khoan}', [BaiDangController::class, 'getByTaiKhoan']);
 Route::get('/bai-dang/{id}', [BaiDangController::class, 'show']);
 Route::put('/bai-dang/{id}', [BaiDangController::class, 'update']);
 Route::delete('/bai-dang/{id}', [BaiDangController::class, 'destroy']);
+
+// ⚙ Các thao tác nâng cao
+Route::get('/bai-dang/nguoi-dung/{id_tai_khoan}', [BaiDangController::class, 'getByTaiKhoan']);
 Route::put('/bai-dang/{id}/doi-trang-thai', [BaiDangController::class, 'doiTrangThai']);
+
 
 //Ngành
 Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);

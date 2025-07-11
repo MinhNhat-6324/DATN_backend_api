@@ -396,4 +396,20 @@ public function doiTrangThai(Request $request, $id)
     return response()->json(['message' => 'Cập nhật trạng thái thành công.']);
 }
 
+public function thongKeTheoTrangThai()
+{
+    $sanSang = BaiDang::where('trang_thai', 'san_sang')->count();
+    $daChoTang = BaiDang::where('trang_thai', 'da_cho_tang')->count();
+    $viPham = BaiDang::where('trang_thai', 'vi_pham')->count();
+
+    return response()->json([
+        'series' => [
+            ['label' => 'Sẵn sàng', 'value' => $sanSang],
+            ['label' => 'Đã cho tặng', 'value' => $daChoTang],
+            ['label' => 'Vi phạm', 'value' => $viPham]
+        ],
+        'total' => $sanSang + $daChoTang + $viPham
+    ]);
+}
+
 }

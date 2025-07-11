@@ -10,42 +10,48 @@ use Illuminate\Support\Facades\Log; // Import Log facade để ghi log lỗi/th�
 
 class ThongBaoController extends Controller
 {
-    /**
-     * Gửi thông báo trạng thái tài khoản.
-     * Đây là một API endpoint, nhận Request từ client hoặc hệ thống.
-     *
-     * @param Request $request Chứa 'id_tai_khoan' và 'trang_thai'.
-     * @return \Illuminate\Http\JsonResponse Phản hồi JSON về trạng thái gửi thông báo.
-     */
-    // Gửi thông báo trạng thái tài khoản
-    public function guiThongBaoTaiKhoan(Request $request)
+    // Cập nhật trạng thái trạng thái tài khoản và thông báo kèm lý do
+    public function capNhatTrangThaiTaiKhoan(Request $request)
     {
         $request->validate([
             'id_tai_khoan' => 'required|exists:TaiKhoan,id_tai_khoan',
             'trang_thai' => 'required|integer',
+            'ly_do' => 'required_if:trang_thai,2|string|max:255',
         ]);
 
-        $taiKhoan = TaiKhoan::findOrFail($request->id_tai_khoan);
+        try {
+            $taiKhoan = TaiKhoan::findOrFail($request->id_tai_khoan);
 
-        $noiDung = match ($request->trang_thai) {
-            1 => 'Tài khoản của bạn đã có thể hoạt động.',
-            2 => 'Tài khoản của bạn đã bị khóa vì vi phạm quy tắc cộng đồng.',
-            default => null
-        };
+            // 1. Cập nhật trạng thái
+            $taiKhoan->trang_thai = $request->trang_thai;
+            $taiKhoan->save();
 
-        if ($noiDung) {
-            // Tạo thông báo với noi_dung và da_doc mặc định là 0
-            ThongBao::create([
-                'id_tai_khoan' => $taiKhoan->id_tai_khoan,
-                'noi_dung' => $noiDung,
-                'thoi_gian_tao' => now(),
-                'da_doc' => 0 // Mặc định là chưa đọc
-            ]);
+            // 2. Xác định nội dung thông báo
+            if ($request->trang_thai == 1) {
+                $tieuDe = 'Tài khoản hoạt động trở lại';
+                $noiDung = 'Tài khoản của bạn đã có thể hoạt động.';
+                $loaiThongBao = 'tai_khoan_mo_khoa';
+            } elseif ($request->trang_thai == 2) {
+                $tieuDe = 'Tài khoản đã bị khóa';
+                $noiDung = 'Tài khoản của bạn đã bị khóa. Lý do: ' . $request->ly_do;
+                $loaiThongBao = 'khoa_tai_khoan';
+            } else {
+                return response()->json(['message' => 'Trạng thái không hợp lệ'], 400);
+            }
 
-            return response()->json(['message' => 'Gửi thông báo thành công']);
+            // 3. Gửi thông báo
+            $this->createAndSaveNotification(
+                $taiKhoan->id_tai_khoan,
+                $tieuDe,
+                $noiDung,
+                $loaiThongBao
+            );
+
+            return response()->json(['message' => 'Cập nhật trạng thái và gửi thông báo thành công']);
+        } catch (\Exception $e) {
+            Log::error('Lỗi khi cập nhật trạng thái tài khoản: ' . $e->getMessage());
+            return response()->json(['message' => 'Lỗi khi cập nhật.', 'error' => $e->getMessage()], 500);
         }
-
-        return response()->json(['message' => 'Trạng thái không hợp lệ'], 400);
     }
 
 
@@ -75,66 +81,83 @@ class ThongBaoController extends Controller
 
     /**
      * Gửi thông báo liên quan đến việc xử lý báo cáo.
-     * Phương thức này được thiết kế để được gọi từ các controller khác (ví dụ: BaoCaoController)
-     * khi có sự kiện liên quan đến báo cáo cần gửi thông báo đến người dùng.
-     *
-     * @param string $loaiThongBao Loại thông báo báo cáo cụ thể (e.g., 'go_bai_viet_chu_bai_viet', 'go_bai_viet_nguoi_bao_cao', 'tu_choi_bao_cao_nguoi_bao_cao').
-     * @param int $idTaiKhoanNhan ID của tài khoản sẽ nhận thông báo.
-     * @param array $data Mảng chứa dữ liệu bổ sung cần thiết cho nội dung thông báo (ví dụ: 'tieu_de_bai_viet', 'id_bai_dang', 'id_bao_cao').
-     * @return bool True nếu thông báo được tạo và lưu thành công, False nếu có lỗi hoặc loại thông báo không hợp lệ.
      */
     public function guiThongBaoBaoCao(string $loaiThongBao, int $idTaiKhoanNhan, array $data = []): bool
-    {
-        $tieuDe = 'Thông báo từ hệ thống quản lý'; // Tiêu đề mặc định
-        $noiDung = '';
-        $lienKet = null; // Mặc định không có liên kết
-        // Giữ lại loại thông báo ban đầu để truyền vào hàm helper
-        $actualLoaiThongBao = $loaiThongBao; 
+{
+    $tieuDe = 'Thông báo từ hệ thống quản lý'; // Tiêu đề mặc định
+    $noiDung = '';
+    $lienKet = null;
 
+    try {
         switch ($loaiThongBao) {
             case 'go_bai_viet_chu_bai_viet':
-                $tieuDeBaiViet = $data['tieu_de_bai_viet'] ?? 'một bài viết của bạn';
+                // Chủ bài viết bị gỡ
+                $tieuDeBaiViet = $data['tieu_de_bai_viet'] ?? 'bài viết của bạn';
                 $idBaiDang = $data['id_bai_dang'] ?? null;
+                $lyDoGo = $data['ly_do_go'] ?? null;
+
                 $tieuDe = 'Bài đăng của bạn đã bị gỡ';
-                $noiDung = "Bài đăng \"{$tieuDeBaiViet}\" của bạn đã bị gỡ vì vi phạm chính sách của chúng tôi. Vui lòng xem xét lại quy định cộng đồng.";
-                if ($idBaiDang) {
-                    $lienKet = '/bai-dang/' . $idBaiDang . '?status=removed'; // Ví dụ: Liên kết đến trang chi tiết bài đăng đã gỡ
+                $noiDung = "Bài đăng \"{$tieuDeBaiViet}\" của bạn đã bị gỡ vì vi phạm chính sách.";
+                
+                if ($lyDoGo) {
+                    $noiDung .= " Lý do: {$lyDoGo}.";
                 }
+
+                $noiDung .= " Vui lòng xem lại quy định cộng đồng.";
+                
+                if ($idBaiDang) {
+                    $lienKet = '/bai-dang/' . $idBaiDang . '?status=removed';
+                }
+
+                Log::info("Thông báo gỡ bài gửi đến {$idTaiKhoanNhan}: {$noiDung}");
                 break;
 
             case 'go_bai_viet_nguoi_bao_cao':
+                // Người báo cáo được thông báo xử lý thành công
                 $idBaoCao = $data['id_bao_cao'] ?? null;
                 $tieuDe = 'Báo cáo của bạn đã được xử lý';
                 $noiDung = "Cảm ơn bạn đã báo cáo. Chúng tôi đã xem xét và gỡ bài đăng vi phạm mà bạn đã báo cáo. Đóng góp của bạn rất quan trọng!";
+                
                 if ($idBaoCao) {
-                    $lienKet = '/bao-cao/' . $idBaoCao . '?status=resolved'; // Ví dụ: Liên kết đến trạng thái báo cáo
+                    $lienKet = '/bao-cao/' . $idBaoCao . '?status=resolved';
                 }
+
+                Log::info("Thông báo xử lý báo cáo gửi đến {$idTaiKhoanNhan}");
                 break;
 
             case 'tu_choi_bao_cao_nguoi_bao_cao':
+                // Người báo cáo được thông báo từ chối
                 $idBaoCao = $data['id_bao_cao'] ?? null;
                 $tieuDe = 'Báo cáo của bạn đã được xem xét';
-                $noiDung = "Cảm ơn bạn đã báo cáo. Chúng tôi đã xem xét báo cáo của bạn và quyết định không gỡ bài đăng vì nó không vi phạm chính sách của chúng tôi.";
+                $noiDung = "Cảm ơn bạn đã báo cáo. Chúng tôi đã xem xét báo cáo của bạn và quyết định không gỡ bài đăng vì nó không vi phạm chính sách.";
+                
                 if ($idBaoCao) {
-                    $lienKet = '/bao-cao/' . $idBaoCao . '?status=rejected'; // Ví dụ: Liên kết đến trạng thái báo cáo
+                    $lienKet = '/bao-cao/' . $idBaoCao . '?status=rejected';
                 }
+
+                Log::info("Thông báo từ chối báo cáo gửi đến {$idTaiKhoanNhan}");
                 break;
 
             default:
-                // Ghi log cảnh báo nếu có loại thông báo không mong muốn được gọi
-                Log::warning('Loại thông báo báo cáo không hợp lệ được gọi: ' . $loaiThongBao);
-                return false; // Trả về false để báo hiệu lỗi
+                Log::warning("Gọi guiThongBaoBaoCao với loại thông báo không hợp lệ: {$loaiThongBao}");
+                return false; // Không gửi thông báo
         }
 
-        // GỌI HÀM HELPER VỚI ĐỦ CÁC THAM SỐ CẦN THIẾT
+        // GỌI HELPER LƯU VÀ GỬI THÔNG BÁO
         return $this->createAndSaveNotification(
             $idTaiKhoanNhan,
-            $tieuDe,             // Đã sửa: truyền tieuDe
+            $tieuDe,
             $noiDung,
-            $actualLoaiThongBao, // Đã sửa: truyền loaiThongBao
+            $loaiThongBao,
             $lienKet
         );
+
+    } catch (\Exception $e) {
+        Log::error("Lỗi guiThongBaoBaoCao: " . $e->getMessage());
+        return false;
     }
+}
+
 
     /**
      * ĐÁNH DẤU TRẠNG THÁI THÔNG BÁO (ĐÃ ĐỌC HOẶC CHƯA ĐỌC).
@@ -202,4 +225,47 @@ class ThongBaoController extends Controller
             return false;
         }
     }
+
+    public function guiYeuCauMoKhoa(Request $request)
+{
+    $request->validate([
+        'id_tai_khoan' => 'required|exists:TaiKhoan,id_tai_khoan',
+        'noi_dung' => 'nullable|string|max:255'
+    ]);
+
+    try {
+        $taiKhoan = TaiKhoan::findOrFail($request->id_tai_khoan);
+
+        if ($taiKhoan->trang_thai != 2) {
+            return response()->json(['message' => 'Tài khoản này không bị khóa, không cần gửi yêu cầu.'], 400);
+        }
+
+        $tieuDe = 'Yêu cầu mở khóa tài khoản';
+        $noiDung = 'Sinh viên ' . $taiKhoan->ho_ten .' có email là '.$taiKhoan->email. ' đã gửi yêu cầu mở khóa tài khoản.';
+        if ($request->filled('noi_dung')) {
+            $noiDung .= ' Nội dung: ' . $request->noi_dung;
+        }
+
+
+        // Lấy tất cả admin
+        $admins = TaiKhoan::where('loai_tai_khoan', 1)->get();
+
+        foreach ($admins as $admin) {
+            $this->createAndSaveNotification(
+                $admin->id_tai_khoan,
+                $tieuDe,
+                $noiDung,
+                'yeu_cau_mo_khoa',
+                '/admin/tai-khoan/' . $taiKhoan->id_tai_khoan
+            );
+        }
+
+        return response()->json(['message' => 'Yêu cầu mở khóa đã được gửi đến quản trị viên.']);
+
+    } catch (\Exception $e) {
+        \Log::error('Lỗi gửi yêu cầu mở khóa: ' . $e->getMessage());
+        return response()->json(['message' => 'Không thể gửi yêu cầu lúc này.', 'error' => $e->getMessage()], 500);
+    }
+}
+
 }

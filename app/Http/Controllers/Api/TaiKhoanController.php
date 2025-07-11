@@ -730,4 +730,38 @@ public function update(Request $request, $id)
             ], 500);
         }
     }
+public function thongKeTong()
+{
+    $tongSoTaiKhoan = TaiKhoan::where('loai_tai_khoan', 0)->count();
+    $dangHoatDong = TaiKhoan::where('loai_tai_khoan', 0)->where('trang_thai', 1)->count();
+    $choDuyet = TaiKhoan::where('loai_tai_khoan', 0)->where('trang_thai', 0)->count();
+    $biKhoa = TaiKhoan::where('loai_tai_khoan', 0)->where('trang_thai', 2)->count();
+
+    return response()->json([
+        'tong_so_tai_khoan' => $tongSoTaiKhoan,
+        'dang_hoat_dong' => $dangHoatDong,
+        'cho_duyet' => $choDuyet,
+        'bi_khoa' => $biKhoa
+    ]);
 }
+
+public function thongKeSeries()
+{
+    $tongSoTaiKhoan = TaiKhoan::where('loai_tai_khoan', 0)->count();
+    $dangHoatDong = TaiKhoan::where('loai_tai_khoan', 0)->where('trang_thai', 1)->count();
+    $choDuyet = TaiKhoan::where('loai_tai_khoan', 0)->where('trang_thai', 0)->count();
+    $biKhoa = TaiKhoan::where('loai_tai_khoan', 0)->where('trang_thai', 2)->count();
+
+    return response()->json([
+        'total' => $tongSoTaiKhoan,
+        'series' => [
+            ['label' => 'Đang hoạt động', 'value' => $dangHoatDong],
+            ['label' => 'Chờ duyệt', 'value' => $choDuyet],
+            ['label' => 'Bị khóa', 'value' => $biKhoa],
+        ]
+    ]);
+}
+
+
+}    
+    
