@@ -74,6 +74,8 @@ Route::delete('/bai-dang/{id}', [BaiDangController::class, 'destroy']);
 // ⚙ Các thao tác nâng cao
 Route::get('/bai-dang/nguoi-dung/{id_tai_khoan}', [BaiDangController::class, 'getByTaiKhoan']);
 Route::put('/bai-dang/{id}/doi-trang-thai', [BaiDangController::class, 'doiTrangThai']);
+Route::post('bai-dang/{id}/repost', [BaiDangController::class, 'repost']);
+
 
 
 //Ngành
