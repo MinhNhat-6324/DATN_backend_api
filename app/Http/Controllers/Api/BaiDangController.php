@@ -12,11 +12,46 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 class BaiDangController extends Controller
 {
+
+    private function capNhatTrangThaiQuaHan()
+    {
+        $baiDangs = BaiDang::all();
+
+        foreach ($baiDangs as $baiDang) {
+            $ngayDang = \Carbon\Carbon::parse($baiDang->ngay_dang);
+            $soNgay = $ngayDang->diffInDays(now());
+
+            if ($baiDang->trang_thai === 'san_sang' && $soNgay > 3) {
+                // Sau 3 ngày => chuyển sang 'quá hạn'
+                $baiDang->trang_thai = 'qua_han';
+                $baiDang->save();
+            }
+
+            if ($baiDang->trang_thai === 'qua_han' && $soNgay > 4) {
+                // Sau 4 ngày => xoá bài đăng
+                // Xoá ảnh vật lý
+                foreach ($baiDang->anhBaiDang as $anh) {
+                    $relativePath = str_replace('/storage/', '', $anh->duong_dan);
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($relativePath);
+                }
+
+                // Xoá bản ghi ảnh
+                \App\Models\AnhBaiDang::where('id_bai_dang', $baiDang->id_bai_dang)->delete();
+
+                // Xoá bài đăng
+                $baiDang->delete();
+            }
+        }
+    }
+
+
+
     /**
      * GET /api/bai-dang
      */
     public function index()
     {
+        $this->capNhatTrangThaiQuaHan($baiDangs);
         $baiDangs = BaiDang::with([
                 'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
                 'chuyenNganhSanPham:id_nganh,ten_nganh'
@@ -38,6 +73,8 @@ class BaiDangController extends Controller
             ->get();
 
         return response()->json($baiDangs);
+       
+
     }
 
     /**
@@ -45,6 +82,7 @@ class BaiDangController extends Controller
      */
     public function getByNganh($id_nganh)
     {
+        $this->capNhatTrangThaiQuaHan();
         $baiDang = BaiDang::with([
             'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
             'chuyenNganhSanPham:id_nganh,ten_nganh'
@@ -74,6 +112,7 @@ class BaiDangController extends Controller
      */
     public function show($id)
 {
+    $this->capNhatTrangThaiQuaHan();
     $baiDang = BaiDang::with([
             'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
             'chuyenNganhSanPham:id_nganh,ten_nganh',
@@ -106,6 +145,7 @@ class BaiDangController extends Controller
      */
     public function getByNganhVaLoai($id_nganh, $id_loai)
     {
+        $this->capNhatTrangThaiQuaHan();
         $baiDangQuery = BaiDang::with([
             'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
             'chuyenNganhSanPham:id_nganh,ten_nganh'
@@ -137,6 +177,7 @@ class BaiDangController extends Controller
      */
     public function getByTieuDe($tieu_de)
     {
+        $this->capNhatTrangThaiQuaHan();
         $baiDangs = BaiDang::with([
                 'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
                 'chuyenNganhSanPham:id_nganh,ten_nganh'
@@ -166,6 +207,7 @@ class BaiDangController extends Controller
      */
     public function locBaiDang($id_nganh, $id_loai, $tieu_de)
     {
+        $this->capNhatTrangThaiQuaHan();
         $query = BaiDang::with([
                 'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
                 'chuyenNganhSanPham:id_nganh,ten_nganh'
@@ -201,6 +243,7 @@ class BaiDangController extends Controller
      */
     public function locTheoLoaiVaTieuDe($id_loai, $tieu_de = null)
     {
+        $this->capNhatTrangThaiQuaHan();
         $query = BaiDang::with([
                 'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
                 'chuyenNganhSanPham:id_nganh,ten_nganh'
@@ -232,6 +275,7 @@ class BaiDangController extends Controller
      */
     public function getByLoai($id_loai)
     {
+        $this->capNhatTrangThaiQuaHan();
         $baiDangs = BaiDang::with([
                 'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
                 'chuyenNganhSanPham:id_nganh,ten_nganh'
@@ -261,6 +305,7 @@ class BaiDangController extends Controller
      */
     public function store(Request $request)
     {
+
         $request->validate([
             'id_tai_khoan' => 'required|integer|exists:TaiKhoan,id_tai_khoan',
             'tieu_de' => 'required|string|max:255',
@@ -277,7 +322,7 @@ class BaiDangController extends Controller
         $tuKhoaCam = [
             'sex', 'xxx', 'free', 'thuốc', 'hack', 'liên hệ', 'gái gọi',
             'sugar baby', 'rẻ nhất', 'trúng thưởng', 'mua ngay', 'đặt cọc',
-            'chính trị', 'phản động', 'viagra', 'lừa đảo'
+            'phản động', 'viagra', 'lừa đảo'
         ];
 
         $tieuDe = Str::lower($request->tieu_de);
@@ -343,6 +388,7 @@ class BaiDangController extends Controller
  */
 public function getByTaiKhoan($id_tai_khoan)
 {
+    $this->capNhatTrangThaiQuaHan();
     $baiDangs = BaiDang::with([
             'anhBaiDang:id_bai_dang,duong_dan,thu_tu',
             'chuyenNganhSanPham:id_nganh,ten_nganh'
@@ -367,6 +413,7 @@ public function getByTaiKhoan($id_tai_khoan)
 }
 public function update(Request $request, $id)
 {
+    
     $baiDang = BaiDang::findOrFail($id);
 
     $baiDang->tieu_de = $request->input('tieu_de');
@@ -439,6 +486,7 @@ public function destroy($id)
 }
 public function doiTrangThai(Request $request, $id)
 {
+
     $baiDang = BaiDang::find($id);
     if (!$baiDang) {
         return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
@@ -454,5 +502,53 @@ public function doiTrangThai(Request $request, $id)
 
     return response()->json(['message' => 'Cập nhật trạng thái thành công.']);
 }
+    public function repost($id)
+{
+    $baiDangCu = BaiDang::with('anhBaiDang')->find($id);
+
+    if (!$baiDangCu) {
+        return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
+    }
+
+    // ✅ Tạo bài đăng mới (bản sao)
+    $baiDangMoi = BaiDang::create([
+        'id_tai_khoan' => $baiDangCu->id_tai_khoan,
+        'tieu_de' => $baiDangCu->tieu_de,
+        'do_moi' => $baiDangCu->do_moi,
+        'id_loai' => $baiDangCu->id_loai,
+        'id_nganh' => $baiDangCu->id_nganh,
+        'lop_chuyen_nganh' => $baiDangCu->lop_chuyen_nganh,
+        'nam_xuat_ban' => $baiDangCu->nam_xuat_ban,
+        'ngay_dang' => now(),
+        'trang_thai' => 'san_sang',
+    ]);
+
+    // ✅ Sao chép ảnh
+    foreach ($baiDangCu->anhBaiDang as $anhCu) {
+        AnhBaiDang::create([
+            'id_bai_dang' => $baiDangMoi->id_bai_dang,
+            'duong_dan' => $anhCu->duong_dan,
+            'thu_tu' => $anhCu->thu_tu,
+        ]);
+    }
+
+    // ✅ Xoá ảnh vật lý của bài cũ
+    foreach ($baiDangCu->anhBaiDang as $anh) {
+        $relativePath = str_replace('/storage/', '', $anh->duong_dan);
+        Storage::disk('public')->delete($relativePath);
+    }
+
+    // ✅ Xoá bản ghi ảnh cũ
+    AnhBaiDang::where('id_bai_dang', $baiDangCu->id_bai_dang)->delete();
+
+    // ✅ Xoá bài đăng cũ
+    $baiDangCu->delete();
+
+    return response()->json([
+        'message' => 'Bài đăng đã được đăng lại và bài cũ đã bị xoá.',
+        'id_bai_dang' => $baiDangMoi->id_bai_dang
+    ]);
+}
+
 
 }

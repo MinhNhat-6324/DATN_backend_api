@@ -63,6 +63,8 @@ Route::get('/bai-dang/{id}', [BaiDangController::class, 'show']);
 Route::put('/bai-dang/{id}', [BaiDangController::class, 'update']);
 Route::delete('/bai-dang/{id}', [BaiDangController::class, 'destroy']);
 Route::put('/bai-dang/{id}/doi-trang-thai', [BaiDangController::class, 'doiTrangThai']);
+Route::post('bai-dang/{id}/repost', [BaiDangController::class, 'repost']);
+
 
 //Ngành
 Route::get('/chuyen-nganh-san-pham', [ChuyenNganhSanPhamController::class, 'index']);
