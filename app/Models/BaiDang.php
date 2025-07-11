@@ -14,14 +14,17 @@ class BaiDang extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'id_tai_khoan',
-        'tieu_de',
-        'do_moi',
-        'id_loai',
-        'id_nganh',
-        'ngay_dang',
-        'trang_thai',
+    'id_tai_khoan',
+    'tieu_de',
+    'do_moi',
+    'id_loai',
+    'id_nganh',
+    'ngay_dang',
+    'trang_thai',
+    'lop_chuyen_nganh',     // thêm dòng này
+    'nam_xuat_ban',         // thêm dòng này
     ];
+
 
     // Mối quan hệ: Một BaiDang thuộc về một TaiKhoan
     public function taiKhoan()

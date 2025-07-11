@@ -126,20 +126,31 @@ class TinNhanController extends Controller
         return response()->json(['message' => 'Tin nhắn đã được xóa thành công.'], 204);
     }
 
-    /**
- * Lấy danh sách tin nhắn giữa 2 người dùng
- * GET /api/tin-nhan/giua/{user1}/{user2}
- */
-public function getTinNhanGiuaHaiNguoi($user1, $user2)
+// Route: GET /api/tin-nhan/giua/{user1}/{user2}
+public function getTinNhanGiuaHaiNguoi(Request $request, $user1, $user2)
 {
-    $tinNhans = TinNhan::where(function ($query) use ($user1, $user2) {
-        $query->where('nguoi_gui', $user1)->where('nguoi_nhan', $user2);
-    })->orWhere(function ($query) use ($user1, $user2) {
-        $query->where('nguoi_gui', $user2)->where('nguoi_nhan', $user1);
+    if (!$request->has('bai_dang')) {
+        return response()->json(['error' => 'Thiếu tham số bai_dang'], 400);
+    }
+
+    $idBaiDang = $request->input('bai_dang');
+
+    $tinNhans = TinNhan::where(function ($q) use ($user1, $user2, $idBaiDang) {
+        $q->where(function ($q2) use ($user1, $user2, $idBaiDang) {
+            $q2->where('nguoi_gui', $user1)
+                ->where('nguoi_nhan', $user2)
+                ->where('bai_dang_lien_quan', $idBaiDang);
+        })->orWhere(function ($q2) use ($user1, $user2, $idBaiDang) {
+            $q2->where('nguoi_gui', $user2)
+                ->where('nguoi_nhan', $user1)
+                ->where('bai_dang_lien_quan', $idBaiDang);
+        });
     })->orderBy('thoi_gian_gui')->get();
 
     return response()->json($tinNhans);
 }
+
+
 /**
  * Lấy danh sách tài khoản đã trò chuyện với người dùng
  * GET /api/tin-nhan/danh-sach-doi-tuong/{userId}
