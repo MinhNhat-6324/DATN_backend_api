@@ -13,36 +13,6 @@ use Illuminate\Support\Facades\Log;
 class BaiDangController extends Controller
 {
 
-    private function capNhatTrangThaiQuaHan()
-    {
-        $baiDangs = BaiDang::all();
-
-        foreach ($baiDangs as $baiDang) {
-            $ngayDang = \Carbon\Carbon::parse($baiDang->ngay_dang);
-            $soNgay = $ngayDang->diffInDays(now());
-
-            if ($baiDang->trang_thai === 'san_sang' && $soNgay > 3) {
-                // Sau 3 ngày => chuyển sang 'quá hạn'
-                $baiDang->trang_thai = 'qua_han';
-                $baiDang->save();
-            }
-
-            if ($baiDang->trang_thai === 'qua_han' && $soNgay > 4) {
-                // Sau 4 ngày => xoá bài đăng
-                // Xoá ảnh vật lý
-                foreach ($baiDang->anhBaiDang as $anh) {
-                    $relativePath = str_replace('/storage/', '', $anh->duong_dan);
-                    \Illuminate\Support\Facades\Storage::disk('public')->delete($relativePath);
-                }
-
-                // Xoá bản ghi ảnh
-                \App\Models\AnhBaiDang::where('id_bai_dang', $baiDang->id_bai_dang)->delete();
-
-                // Xoá bài đăng
-                $baiDang->delete();
-            }
-        }
-    }
 
 
 
@@ -503,68 +473,119 @@ public function doiTrangThai(Request $request, $id)
     return response()->json(['message' => 'Cập nhật trạng thái thành công.']);
 }
     public function repost($id)
-{
-    $baiDangCu = BaiDang::with('anhBaiDang')->find($id);
+        {
+            $baiDangCu = BaiDang::with('anhBaiDang')->find($id);
 
-    if (!$baiDangCu) {
-        return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
-    }
+            if (!$baiDangCu) {
+                return response()->json(['message' => 'Không tìm thấy bài đăng.'], 404);
+            }
 
-    // ✅ Tạo bài đăng mới (bản sao)
-    $baiDangMoi = BaiDang::create([
-        'id_tai_khoan' => $baiDangCu->id_tai_khoan,
-        'tieu_de' => $baiDangCu->tieu_de,
-        'do_moi' => $baiDangCu->do_moi,
-        'id_loai' => $baiDangCu->id_loai,
-        'id_nganh' => $baiDangCu->id_nganh,
-        'lop_chuyen_nganh' => $baiDangCu->lop_chuyen_nganh,
-        'nam_xuat_ban' => $baiDangCu->nam_xuat_ban,
-        'ngay_dang' => now(),
-        'trang_thai' => 'san_sang',
-    ]);
+            // ✅ Tạo bài đăng mới (bản sao)
+            $baiDangMoi = BaiDang::create([
+                'id_tai_khoan' => $baiDangCu->id_tai_khoan,
+                'tieu_de' => $baiDangCu->tieu_de,
+                'do_moi' => $baiDangCu->do_moi,
+                'id_loai' => $baiDangCu->id_loai,
+                'id_nganh' => $baiDangCu->id_nganh,
+                'lop_chuyen_nganh' => $baiDangCu->lop_chuyen_nganh,
+                'nam_xuat_ban' => $baiDangCu->nam_xuat_ban,
+                'ngay_dang' => now(),
+                'trang_thai' => 'san_sang',
+            ]);
 
-    // ✅ Sao chép ảnh
-    foreach ($baiDangCu->anhBaiDang as $anhCu) {
-        AnhBaiDang::create([
-            'id_bai_dang' => $baiDangMoi->id_bai_dang,
-            'duong_dan' => $anhCu->duong_dan,
-            'thu_tu' => $anhCu->thu_tu,
+            // ✅ Sao chép ảnh
+            foreach ($baiDangCu->anhBaiDang as $anhCu) {
+                AnhBaiDang::create([
+                    'id_bai_dang' => $baiDangMoi->id_bai_dang,
+                    'duong_dan' => $anhCu->duong_dan,
+                    'thu_tu' => $anhCu->thu_tu,
+                ]);
+            }
+
+            // ✅ Xoá ảnh vật lý của bài cũ
+            foreach ($baiDangCu->anhBaiDang as $anh) {
+                $relativePath = str_replace('/storage/', '', $anh->duong_dan);
+                Storage::disk('public')->delete($relativePath);
+            }
+
+            // ✅ Xoá bản ghi ảnh cũ
+            AnhBaiDang::where('id_bai_dang', $baiDangCu->id_bai_dang)->delete();
+
+            // ✅ Xoá bài đăng cũ
+            $baiDangCu->delete();
+
+            return response()->json([
+                'message' => 'Bài đăng đã được đăng lại và bài cũ đã bị xoá.',
+                'id_bai_dang' => $baiDangMoi->id_bai_dang
+            ]);
+        }
+
+
+    public function thongKeTheoTrangThai()
+    {
+        $sanSang = BaiDang::where('trang_thai', 'san_sang')->count();
+        $daChoTang = BaiDang::where('trang_thai', 'da_cho_tang')->count();
+        $viPham = BaiDang::where('trang_thai', 'vi_pham')->count();
+        $quaHan = BaiDang::where('trang_thai', 'qua_han')->count();
+
+        return response()->json([
+            'series' => [
+                ['label' => 'Sẵn sàng', 'value' => $sanSang],
+                ['label' => 'Đã cho tặng', 'value' => $daChoTang],
+                ['label' => 'Vi phạm', 'value' => $viPham],
+                ['label' => 'Quá hạn', 'value' => $quaHan]
+            ],
+            'total' => $sanSang + $daChoTang + $viPham + $quaHan
         ]);
     }
 
-    // ✅ Xoá ảnh vật lý của bài cũ
-    foreach ($baiDangCu->anhBaiDang as $anh) {
-        $relativePath = str_replace('/storage/', '', $anh->duong_dan);
-        Storage::disk('public')->delete($relativePath);
+    private function capNhatTrangThaiQuaHan()
+    {
+        $baiDangs = BaiDang::all();
+
+        foreach ($baiDangs as $baiDang) {
+            $ngayDang = \Carbon\Carbon::parse($baiDang->ngay_dang);
+            $soNgay = $ngayDang->diffInDays(now());
+
+            if ($baiDang->trang_thai === 'san_sang' && $soNgay > 3) {
+                // Sau 3 ngày => chuyển sang 'quá hạn'
+                $baiDang->trang_thai = 'qua_han';
+                $baiDang->save();
+
+                // Gửi thông báo
+                \App\Models\ThongBao::create([
+                    'id_tai_khoan' => $baiDang->id_tai_khoan,
+                    'noi_dung' => 'Bài đăng "' . $baiDang->tieu_de . '" đã quá hạn sau 3 ngày mà chưa được cho tặng. Hệ thống đã gỡ bỏ bài đăng của bạn. Bạn vẫn có thể đăng lại bài viết này. Xin cám ơn',
+                    'thoi_gian_tao' => now(),
+                    'da_doc' => 0,
+                ]);
+            }
+
+            if ($baiDang->trang_thai === 'qua_han' && $soNgay > 4) {
+                // Sau 4 ngày => xoá bài đăng
+                // Xoá ảnh vật lý
+                foreach ($baiDang->anhBaiDang as $anh) {
+                    $relativePath = str_replace('/storage/', '', $anh->duong_dan);
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($relativePath);
+                }
+
+                // Xoá bản ghi ảnh
+                \App\Models\AnhBaiDang::where('id_bai_dang', $baiDang->id_bai_dang)->delete();
+
+                // Gửi thông báo trước khi xoá bài đăng
+                \App\Models\ThongBao::create([
+                    'id_tai_khoan' => $baiDang->id_tai_khoan,
+                    'noi_dung' => 'Bài đăng "' . $baiDang->tieu_de . '" đã bị xoá khỏi hệ thống do hết thời gian bạn có thể đăng lại. Cám ơn vì những đóng góp của bạn',
+                    'thoi_gian_tao' => now(),
+                    'da_doc' => 0,
+                ]);
+
+                // Xoá bài đăng
+                $baiDang->delete();
+            }
+        }
     }
 
-    // ✅ Xoá bản ghi ảnh cũ
-    AnhBaiDang::where('id_bai_dang', $baiDangCu->id_bai_dang)->delete();
 
-    // ✅ Xoá bài đăng cũ
-    $baiDangCu->delete();
-
-    return response()->json([
-        'message' => 'Bài đăng đã được đăng lại và bài cũ đã bị xoá.',
-        'id_bai_dang' => $baiDangMoi->id_bai_dang
-    ]);
-}
-
-
-public function thongKeTheoTrangThai()
-{
-    $sanSang = BaiDang::where('trang_thai', 'san_sang')->count();
-    $daChoTang = BaiDang::where('trang_thai', 'da_cho_tang')->count();
-    $viPham = BaiDang::where('trang_thai', 'vi_pham')->count();
-
-    return response()->json([
-        'series' => [
-            ['label' => 'Sẵn sàng', 'value' => $sanSang],
-            ['label' => 'Đã cho tặng', 'value' => $daChoTang],
-            ['label' => 'Vi phạm', 'value' => $viPham]
-        ],
-        'total' => $sanSang + $daChoTang + $viPham
-    ]);
-}
 
 }
